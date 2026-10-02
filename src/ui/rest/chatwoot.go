@@ -826,7 +826,7 @@ func (h *ChatwootHandler) SyncHistory(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  fiber.StatusBadRequest,
 			Code:    "CHATWOOT_NOT_CONFIGURED",
-			Message: "Chatwoot is not configured for this device. Set per-device config via /devices/:device_id/chatwoot/config or the CHATWOOT_* env vars.",
+			Message: "Chatwoot no está configurado para este dispositivo. Usá PUT /devices/:device_id/chatwoot/config o las variables CHATWOOT_*.",
 		})
 	}
 
@@ -850,7 +850,7 @@ func (h *ChatwootHandler) SyncHistory(c fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(utils.ResponseData{
 			Status:  fiber.StatusConflict,
 			Code:    "SYNC_ALREADY_RUNNING",
-			Message: "A sync is already in progress for this device",
+			Message: "Ya hay una sincronización en curso para este dispositivo",
 			Results: map[string]any{
 				"progress": progress,
 			},
@@ -886,7 +886,7 @@ func (h *ChatwootHandler) SyncHistory(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SYNC_STARTED",
-		Message: "History sync initiated in background",
+		Message: "Sincronización de historial iniciada en segundo plano",
 		Results: map[string]any{
 			"device_id":      resolvedID,
 			"days_limit":     opts.DaysLimit,
@@ -922,7 +922,7 @@ func (h *ChatwootHandler) SyncStatus(c fiber.Ctx) error {
 		return c.JSON(utils.ResponseData{
 			Status:  200,
 			Code:    "SUCCESS",
-			Message: "No sync has been initiated yet",
+			Message: "Aún no se inició ninguna sincronización",
 			Results: map[string]any{
 				"device_id": resolvedID,
 				"status":    "idle",
@@ -935,7 +935,7 @@ func (h *ChatwootHandler) SyncStatus(c fiber.Ctx) error {
 		return c.JSON(utils.ResponseData{
 			Status:  200,
 			Code:    "SUCCESS",
-			Message: "No sync progress found for this device",
+			Message: "No hay progreso de sincronización para este dispositivo",
 			Results: map[string]any{
 				"device_id": resolvedID,
 				"status":    "idle",
@@ -946,7 +946,7 @@ func (h *ChatwootHandler) SyncStatus(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Sync status retrieved",
+		Message: "Estado de sincronización obtenido",
 		Results: progress,
 	})
 }

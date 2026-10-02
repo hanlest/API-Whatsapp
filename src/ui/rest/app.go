@@ -40,7 +40,7 @@ func AppInfo(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Fetch app info success",
+		Message: "Metadatos del servidor obtenidos correctamente",
 		Results: map[string]any{
 			"version":          config.AppVersion,
 			"os":               config.AppOs,
@@ -65,7 +65,7 @@ func (handler *App) Login(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Login success",
+		Message: "Inicio de sesión con QR iniciado correctamente",
 		Results: map[string]any{
 			"device_id":   device.ID(),
 			"qr_link":     fmt.Sprintf("%s://%s%s/%s", c.Scheme(), c.Host(), config.AppBasePath, response.ImagePath),
@@ -86,7 +86,7 @@ func (handler *App) LoginWithCode(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Login with code success",
+		Message: "Código de emparejamiento generado correctamente",
 		Results: map[string]any{
 			"device_id": device.ID(),
 			"pair_code": pairCode,
@@ -106,7 +106,7 @@ func (handler *App) PasskeyChallenge(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Passkey pairing status",
+		Message: "Estado del emparejamiento passkey",
 		Results: map[string]any{
 			"device_id":       device.ID(),
 			"status":          response.Status,
@@ -125,7 +125,7 @@ func (handler *App) PasskeyResponse(c fiber.Ctx) error {
 
 	var assertion types.WebAuthnResponse
 	if err := c.Bind().Body(&assertion); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid WebAuthn assertion payload: "+err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, "payload WebAuthn inválido: "+err.Error())
 	}
 
 	err = handler.Service.PasskeyResponse(c.Context(), device.ID(), &assertion)
@@ -134,7 +134,7 @@ func (handler *App) PasskeyResponse(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Passkey response sent",
+		Message: "Respuesta passkey enviada correctamente",
 		Results: map[string]any{"device_id": device.ID()},
 	})
 }
@@ -151,7 +151,7 @@ func (handler *App) PasskeyConfirm(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Passkey pairing confirmed",
+		Message: "Emparejamiento passkey confirmado",
 		Results: map[string]any{"device_id": device.ID()},
 	})
 }
@@ -168,7 +168,7 @@ func (handler *App) Logout(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success logout",
+		Message: "Sesión cerrada correctamente",
 		Results: map[string]any{"device_id": device.ID()},
 	})
 }
@@ -185,7 +185,7 @@ func (handler *App) Reconnect(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Reconnect success",
+		Message: "Reconexión solicitada correctamente",
 		Results: map[string]any{"device_id": device.ID()},
 	})
 }
@@ -197,7 +197,7 @@ func (handler *App) Devices(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Fetch device success",
+		Message: "Dispositivos obtenidos correctamente",
 		Results: devices,
 	})
 }
@@ -214,7 +214,7 @@ func (handler *App) ConnectionStatus(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Connection status retrieved",
+		Message: "Estado de conexión obtenido",
 		Results: map[string]any{
 			"is_connected": isConnected,
 			"is_logged_in": isLoggedIn,
@@ -227,11 +227,11 @@ func (handler *App) ConnectionStatus(c fiber.Ctx) error {
 func getDeviceInstance(c fiber.Ctx) (*whatsapp.DeviceInstance, error) {
 	value := c.Locals("device")
 	if value == nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "device context is missing")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "falta el contexto del dispositivo")
 	}
 	device, ok := value.(*whatsapp.DeviceInstance)
 	if !ok || device == nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid device context")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "contexto de dispositivo inválido")
 	}
 	return device, nil
 }

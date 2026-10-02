@@ -24,6 +24,7 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/chatstorage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/sqlite"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/usecase"
 	_ "github.com/lib/pq"
@@ -91,10 +92,16 @@ func initEnvConfig() {
 	if envOs := viper.GetString("app_os"); envOs != "" {
 		config.AppOs = envOs
 	}
-	if envBasicAuth := viper.GetString("app_basic_auth"); envBasicAuth != "" {
-		credential := strings.Split(envBasicAuth, ",")
-		config.AppBasicAuthCredential = credential
+	// Empty APP_BASIC_AUTH= in .env disables auth (internal deployments). When the key
+	// is present in config, it overrides CLI --basic-auth/-b.
+	if viper.IsSet("app_basic_auth") {
+		if raw := strings.TrimSpace(viper.GetString("app_basic_auth")); raw == "" {
+			config.AppBasicAuthCredential = nil
+		} else {
+			config.AppBasicAuthCredential = strings.Split(raw, ",")
+		}
 	}
+	config.AppBasicAuthCredential = config.NormalizeBasicAuthCredentials(config.AppBasicAuthCredential)
 	if envBasePath := viper.GetString("app_base_path"); envBasePath != "" {
 		config.AppBasePath = envBasePath
 	}
@@ -293,6 +300,27 @@ func initEnvConfig() {
 	}
 	if viper.IsSet("chatwoot_message_delete") {
 		config.ChatwootMessageDelete = viper.GetBool("chatwoot_message_delete")
+	}
+	if envMediaDriver := viper.GetString("media_storage_driver"); envMediaDriver != "" {
+		config.MediaStorageDriver = envMediaDriver
+	}
+	if envMiniCloudBase := viper.GetString("minicloud_base_url"); envMiniCloudBase != "" {
+		config.MiniCloudBaseURL = envMiniCloudBase
+	}
+	if envMiniCloudBucket := viper.GetString("minicloud_default_bucket"); envMiniCloudBucket != "" {
+		config.MiniCloudDefaultBucket = envMiniCloudBucket
+	}
+	if viper.IsSet("media_proxy_enabled") {
+		config.MediaProxyEnabled = viper.GetBool("media_proxy_enabled")
+	}
+	if viper.IsSet("minicloud_auto_create_bucket") {
+		config.MiniCloudAutoCreateBucket = viper.GetBool("minicloud_auto_create_bucket")
+	}
+	if envStorageID := viper.GetString("minicloud_default_storage_id"); envStorageID != "" {
+		config.MiniCloudDefaultStorageID = envStorageID
+	}
+	if envQuota := viper.GetString("minicloud_local_storage_quota"); envQuota != "" {
+		config.MiniCloudLocalStorageQuota = envQuota
 	}
 }
 
@@ -499,6 +527,50 @@ func initFlags() {
 		`duration to stay available during a presence pulse --presence-pulse-duration <duration> | example: --presence-pulse-duration=5m`,
 	)
 
+	// Media storage (MiniCloud / local)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.MediaStorageDriver,
+		"media-storage-driver", "",
+		config.MediaStorageDriver,
+		`media storage backend --media-storage-driver <local|minicloud> | example: --media-storage-driver=minicloud`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.MiniCloudBaseURL,
+		"minicloud-base-url", "",
+		config.MiniCloudBaseURL,
+		`MiniCloud API base URL (no trailing path) --minicloud-base-url <url> | example: --minicloud-base-url=http://localhost:8082`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.MiniCloudDefaultBucket,
+		"minicloud-default-bucket", "",
+		config.MiniCloudDefaultBucket,
+		`default MiniCloud bucket when a device has no bucket override --minicloud-default-bucket <name>`,
+	)
+	rootCmd.PersistentFlags().BoolVarP(
+		&config.MediaProxyEnabled,
+		"media-proxy-enabled", "",
+		config.MediaProxyEnabled,
+		`serve mc: media via authenticated proxy URLs --media-proxy-enabled <true/false>`,
+	)
+	rootCmd.PersistentFlags().BoolVarP(
+		&config.MiniCloudAutoCreateBucket,
+		"minicloud-auto-create-bucket", "",
+		config.MiniCloudAutoCreateBucket,
+		`create MiniCloud bucket and attach default primary storage on first upload if missing --minicloud-auto-create-bucket <true/false>`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.MiniCloudDefaultStorageID,
+		"minicloud-default-storage-id", "",
+		config.MiniCloudDefaultStorageID,
+		`optional MiniCloud storage id for all devices; default is each device slot name --minicloud-default-storage-id <id>`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.MiniCloudLocalStorageQuota,
+		"minicloud-local-storage-quota", "",
+		config.MiniCloudLocalStorageQuota,
+		`quota for auto-created per-device local storage backends --minicloud-local-storage-quota <size>`,
+	)
+
 	// Chatwoot flags
 	rootCmd.PersistentFlags().BoolVarP(
 		&config.ChatwootEnabled,
@@ -675,6 +747,7 @@ func initApp() {
 
 	chatStorageRepo = chatstorage.NewStorageRepository(chatStorageDB)
 	chatStorageRepo.InitializeSchema()
+	storage.SetRepository(chatStorageRepo)
 
 	whatsappDB := whatsapp.InitWaDB(ctx, config.DBURI)
 	var keysDB *sqlstore.Container
@@ -689,6 +762,8 @@ func initApp() {
 	if dm != nil {
 		_ = dm.LoadExistingDevices(ctx)
 	}
+
+	startMiniCloudMediaBootstrap()
 
 	// Usecase
 	appUsecase = usecase.NewAppService(chatStorageRepo, dm)

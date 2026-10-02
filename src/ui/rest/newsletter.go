@@ -33,7 +33,7 @@ func (controller *Newsletter) Unfollow(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success unfollow newsletter",
+		Message: "Canal dejado de seguir correctamente",
 	})
 }
 
@@ -48,7 +48,7 @@ func (controller *Newsletter) GetMessages(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get newsletter messages",
+		Message: "Mensajes del canal obtenidos correctamente",
 		Results: response,
 	})
 }
@@ -66,7 +66,11 @@ func (controller *Newsletter) DownloadMedia(c fiber.Ctx) error {
 	response, err := controller.Service.DownloadMedia(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 	if response.FileURL == "" {
-		response.FileURL = publicStaticFileURL(c, response.FilePath)
+		deviceID := ""
+		if inst := getDeviceFromCtx(c); inst != nil {
+			deviceID = inst.ID()
+		}
+		response.FileURL = publicMediaFileURL(c, deviceID, response.FilePath)
 	}
 
 	return c.JSON(utils.ResponseData{

@@ -55,7 +55,7 @@ func (controller *Group) JoinGroupWithLink(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success joined group",
+		Message: "Te uniste al grupo correctamente",
 		Results: map[string]string{
 			"group_id": response,
 		},
@@ -73,7 +73,7 @@ func (controller *Group) GetGroupInfoFromLink(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get group info from link",
+		Message: "Información del grupo obtenida desde el enlace",
 		Results: response,
 	})
 }
@@ -91,7 +91,7 @@ func (controller *Group) LeaveGroup(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success leave group",
+		Message: "Abandonaste el grupo correctamente",
 	})
 }
 
@@ -106,7 +106,7 @@ func (controller *Group) CreateGroup(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: fmt.Sprintf("Success created group with id %s", groupID),
+		Message: fmt.Sprintf("Grupo creado correctamente (id %s)", groupID),
 		Results: map[string]string{
 			"group_id": groupID,
 		},
@@ -122,7 +122,7 @@ func (controller *Group) ListParticipants(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "INVALID_GROUP_ID",
-			Message: "Group ID cannot be empty",
+			Message: "El ID del grupo no puede estar vacío",
 		})
 	}
 
@@ -134,7 +134,7 @@ func (controller *Group) ListParticipants(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success getting group participants",
+		Message: "Participantes del grupo obtenidos correctamente",
 		Results: result,
 	})
 }
@@ -148,7 +148,7 @@ func (controller *Group) ExportParticipants(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "INVALID_GROUP_ID",
-			Message: "Group ID cannot be empty",
+			Message: "El ID del grupo no puede estar vacío",
 		})
 	}
 
@@ -193,19 +193,19 @@ func (controller *Group) ExportParticipants(c fiber.Ctx) error {
 }
 
 func (controller *Group) AddParticipants(c fiber.Ctx) error {
-	return controller.manageParticipants(c, whatsmeow.ParticipantChangeAdd, "Success add participants")
+	return controller.manageParticipants(c, whatsmeow.ParticipantChangeAdd, "Participantes añadidos correctamente")
 }
 
 func (controller *Group) DeleteParticipants(c fiber.Ctx) error {
-	return controller.manageParticipants(c, whatsmeow.ParticipantChangeRemove, "Success delete participants")
+	return controller.manageParticipants(c, whatsmeow.ParticipantChangeRemove, "Participantes eliminados correctamente")
 }
 
 func (controller *Group) PromoteParticipants(c fiber.Ctx) error {
-	return controller.manageParticipants(c, whatsmeow.ParticipantChangePromote, "Success promote participants")
+	return controller.manageParticipants(c, whatsmeow.ParticipantChangePromote, "Participantes promovidos a administradores")
 }
 
 func (controller *Group) DemoteParticipants(c fiber.Ctx) error {
-	return controller.manageParticipants(c, whatsmeow.ParticipantChangeDemote, "Success demote participants")
+	return controller.manageParticipants(c, whatsmeow.ParticipantChangeDemote, "Administradores degradados a miembros")
 }
 
 func (controller *Group) ListParticipantRequests(c fiber.Ctx) error {
@@ -217,7 +217,7 @@ func (controller *Group) ListParticipantRequests(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "INVALID_GROUP_ID",
-			Message: "Group ID cannot be empty",
+			Message: "El ID del grupo no puede estar vacío",
 		})
 	}
 
@@ -229,17 +229,17 @@ func (controller *Group) ListParticipantRequests(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success getting list requested participants",
+		Message: "Solicitudes de ingreso listadas correctamente",
 		Results: result,
 	})
 }
 
 func (controller *Group) ApproveParticipantRequests(c fiber.Ctx) error {
-	return controller.handleRequestedParticipants(c, whatsmeow.ParticipantChangeApprove, "Success approve requested participants")
+	return controller.handleRequestedParticipants(c, whatsmeow.ParticipantChangeApprove, "Solicitudes de ingreso aprobadas")
 }
 
 func (controller *Group) RejectParticipantRequests(c fiber.Ctx) error {
-	return controller.handleRequestedParticipants(c, whatsmeow.ParticipantChangeReject, "Success reject requested participants")
+	return controller.handleRequestedParticipants(c, whatsmeow.ParticipantChangeReject, "Solicitudes de ingreso rechazadas")
 }
 
 // Generalized participant management handler
@@ -294,7 +294,7 @@ func (controller *Group) SetGroupPhoto(c fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 				Status:  400,
 				Code:    "INVALID_IMAGE_FORMAT",
-				Message: fmt.Sprintf("Image validation failed: %v", err),
+				Message: fmt.Sprintf("Validación de imagen fallida: %v", err),
 			})
 		}
 
@@ -309,9 +309,9 @@ func (controller *Group) SetGroupPhoto(c fiber.Ctx) error {
 	}
 	utils.PanicIfNeeded(err)
 
-	message := "Success update group photo"
+	message := "Foto del grupo actualizada correctamente"
 	if request.Photo == nil {
-		message = "Success remove group photo"
+		message = "Foto del grupo eliminada correctamente"
 	}
 
 	return c.JSON(utils.ResponseData{
@@ -338,7 +338,7 @@ func (controller *Group) SetGroupName(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: fmt.Sprintf("Success update group name to '%s'", request.Name),
+		Message: fmt.Sprintf("Nombre del grupo actualizado a '%s'", request.Name),
 	})
 }
 
@@ -352,9 +352,9 @@ func (controller *Group) SetGroupLocked(c fiber.Ctx) error {
 	err = controller.Service.SetGroupLocked(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 
-	message := "Success set group as unlocked"
+	message := "Grupo desbloqueado (miembros pueden editar info)"
 	if request.Locked {
-		message = "Success set group as locked"
+		message = "Grupo bloqueado (solo administradores editan info)"
 	}
 
 	return c.JSON(utils.ResponseData{
@@ -374,9 +374,9 @@ func (controller *Group) SetGroupAnnounce(c fiber.Ctx) error {
 	err = controller.Service.SetGroupAnnounce(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 
-	message := "Success disable announce mode"
+	message := "Modo anuncios desactivado"
 	if request.Announce {
-		message = "Success enable announce mode"
+		message = "Modo anuncios activado (solo admins envían mensajes)"
 	}
 
 	return c.JSON(utils.ResponseData{
@@ -396,9 +396,9 @@ func (controller *Group) SetGroupTopic(c fiber.Ctx) error {
 	err = controller.Service.SetGroupTopic(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 
-	message := "Success update group topic"
+	message := "Descripción del grupo actualizada"
 	if request.Topic == "" {
-		message = "Success remove group topic"
+		message = "Descripción del grupo eliminada"
 	}
 
 	return c.JSON(utils.ResponseData{
@@ -422,7 +422,7 @@ func (controller *Group) GroupInfo(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get group info",
+		Message: "Información del grupo obtenida correctamente",
 		Results: response.Data,
 	})
 }
@@ -440,7 +440,7 @@ func (controller *Group) GetGroupInviteLink(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get group invite link",
+		Message: "Enlace de invitación obtenido correctamente",
 		Results: response,
 	})
 }

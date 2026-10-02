@@ -10,6 +10,7 @@ import (
 	domainDevice "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/device"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"github.com/sirupsen/logrus"
@@ -77,6 +78,12 @@ func (s *serviceDevice) AddDevice(ctx context.Context, deviceID string, webhook 
 		if err := storage.SetDeviceWebhookConfig(deviceID, webhook); err != nil {
 			return nil, fmt.Errorf("device %s created but webhook config could not be saved: %w", deviceID, err)
 		}
+	}
+
+	if err := storage.EnsureMiniCloudBucketForDevice(ctx, deviceID); err != nil {
+		logrus.Warnf("[MEDIA] MiniCloud provision for new device %q: %v", deviceID, err)
+	} else {
+		logrus.Infof("[MEDIA] MiniCloud bucket/storage checked for new device %q", deviceID)
 	}
 
 	device := convertInstance(inst)

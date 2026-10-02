@@ -79,7 +79,7 @@ func (h *ChatwootHandler) ListChatwootConfigs(c fiber.Ctx) error {
 	for _, cfg := range configs {
 		views = append(views, chatwootConfigView(cfg))
 	}
-	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Chatwoot device configs", Results: views})
+	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Configuraciones Chatwoot por dispositivo", Results: views})
 }
 
 // GetChatwootConfig returns one device's Chatwoot config (token masked).
@@ -87,16 +87,16 @@ func (h *ChatwootHandler) ListChatwootConfigs(c fiber.Ctx) error {
 func (h *ChatwootHandler) GetChatwootConfig(c fiber.Ctx) error {
 	deviceID, ok := h.resolveConfigDeviceID(c)
 	if !ok {
-		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "DEVICE_NOT_FOUND", Message: "device not found"})
+		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "DEVICE_NOT_FOUND", Message: "dispositivo no encontrado"})
 	}
 	cfg, err := h.ChatStorageRepo.GetChatwootDeviceConfig(deviceID)
 	if err != nil {
 		return utils.ResponseError(c, fmt.Sprintf("failed to load config: %v", err))
 	}
 	if cfg == nil {
-		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "CONFIG_NOT_FOUND", Message: "no Chatwoot config for this device"})
+		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "CONFIG_NOT_FOUND", Message: "no hay configuración Chatwoot para este dispositivo"})
 	}
-	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Chatwoot device config", Results: chatwootConfigView(cfg)})
+	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Configuración Chatwoot del dispositivo", Results: chatwootConfigView(cfg)})
 }
 
 // UpsertChatwootConfig creates or updates a device's Chatwoot config.
@@ -104,7 +104,7 @@ func (h *ChatwootHandler) GetChatwootConfig(c fiber.Ctx) error {
 func (h *ChatwootHandler) UpsertChatwootConfig(c fiber.Ctx) error {
 	deviceID, ok := h.resolveConfigDeviceID(c)
 	if !ok {
-		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "DEVICE_NOT_FOUND", Message: "device not found"})
+		return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{Status: fiber.StatusNotFound, Code: "DEVICE_NOT_FOUND", Message: "dispositivo no encontrado"})
 	}
 
 	var req chatwootConfigRequest
@@ -118,7 +118,7 @@ func (h *ChatwootHandler) UpsertChatwootConfig(c fiber.Ctx) error {
 	}
 	canonicalURL, _ := chatwoot.CanonicalizeChatwootURL(req.ChatwootURL)
 	if req.AccountID <= 0 || req.InboxID <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{Status: fiber.StatusBadRequest, Code: "INVALID_REQUEST", Message: "account_id and inbox_id must be positive"})
+		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{Status: fiber.StatusBadRequest, Code: "INVALID_REQUEST", Message: "account_id e inbox_id deben ser positivos"})
 	}
 
 	existing, err := h.ChatStorageRepo.GetChatwootDeviceConfig(deviceID)
@@ -133,7 +133,7 @@ func (h *ChatwootHandler) UpsertChatwootConfig(c fiber.Ctx) error {
 	apiToken := strings.TrimSpace(req.APIToken)
 	if apiToken == "" {
 		if existing == nil {
-			return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{Status: fiber.StatusBadRequest, Code: "INVALID_REQUEST", Message: "api_token is required"})
+			return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{Status: fiber.StatusBadRequest, Code: "INVALID_REQUEST", Message: "api_token es obligatorio"})
 		}
 		apiToken = existing.APIToken
 	} else if existing != nil && apiToken == maskAPIToken(existing.APIToken) {
@@ -154,7 +154,7 @@ func (h *ChatwootHandler) UpsertChatwootConfig(c fiber.Ctx) error {
 				return c.Status(fiber.StatusConflict).JSON(utils.ResponseData{
 					Status:  fiber.StatusConflict,
 					Code:    "CONFIG_HAS_LINKED_CONVERSATIONS",
-					Message: "cannot change chatwoot_url/account_id/inbox_id while linked conversations exist; delete and recreate the device config to rebind",
+					Message: "no se puede cambiar chatwoot_url/account_id/inbox_id con conversaciones vinculadas; eliminá y recreá la config del dispositivo para reasignar",
 				})
 			}
 		}
@@ -188,7 +188,7 @@ func (h *ChatwootHandler) UpsertChatwootConfig(c fiber.Ctx) error {
 		reg.Invalidate(deviceID)
 	}
 
-	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Chatwoot device config saved", Results: chatwootConfigView(cfg)})
+	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Configuración Chatwoot guardada", Results: chatwootConfigView(cfg)})
 }
 
 // DeleteChatwootConfig removes a device's Chatwoot config, along with the
@@ -222,7 +222,7 @@ func (h *ChatwootHandler) DeleteChatwootConfig(c fiber.Ctx) error {
 	if reg := chatwoot.GetClientRegistry(); reg != nil {
 		reg.Invalidate(deviceID)
 	}
-	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Chatwoot device config deleted", Results: map[string]any{"device_id": deviceID}})
+	return c.JSON(utils.ResponseData{Status: 200, Code: "SUCCESS", Message: "Configuración Chatwoot eliminada", Results: map[string]any{"device_id": deviceID}})
 }
 
 // resolveConfigDeviceID resolves the :device_id path param to a known device id

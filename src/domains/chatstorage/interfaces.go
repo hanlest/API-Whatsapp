@@ -87,6 +87,12 @@ type IChatStorageRepository interface {
 	DeleteChatwootDeviceConfig(deviceID string) error
 	CountChatwootDeviceConfigs() (int, error)
 
+	// Per-device media storage (MiniCloud bucket + folder)
+	SaveDeviceMediaStorage(cfg *DeviceMediaStorage) error
+	GetDeviceMediaStorage(deviceID string) (*DeviceMediaStorage, error)
+	ListDeviceMediaStorage() ([]*DeviceMediaStorage, error)
+	DeleteDeviceMediaStorage(deviceID string) error
+
 	// Statistics
 	GetChatMessageCount(chatJID string) (int64, error)
 	GetChatMessageCountByDevice(deviceID, chatJID string) (int64, error)

@@ -79,6 +79,16 @@ var (
 	ChatStorageEnableWAL         = true
 	ChatStorageMaxOpenConns      = 5 // Max concurrent SQLite connections for chat storage (WAL allows concurrent readers + 1 writer)
 
+	// Media object storage (local disk or MiniCloud GCS-compatible API).
+	MediaStorageDriver     = "local" // local | minicloud
+	MiniCloudBaseURL       = ""
+	MiniCloudDefaultBucket = ""
+	MiniCloudAutoCreateBucket = true
+	// Optional override for all devices; when empty, storage id = sanitized device slot name.
+	MiniCloudDefaultStorageID = ""
+	MiniCloudLocalStorageQuota = "500GB" // quota when auto-creating a per-device local storage backend
+	MediaProxyEnabled      = true
+
 	ChatwootEnabled   = false
 	ChatwootURL       = ""
 	ChatwootAPIToken  = ""

@@ -213,6 +213,22 @@ func (r *deviceChatStorage) CountChatwootDeviceConfigs() (int, error) {
 	return r.base.CountChatwootDeviceConfigs()
 }
 
+func (r *deviceChatStorage) SaveDeviceMediaStorage(cfg *domainChatStorage.DeviceMediaStorage) error {
+	return r.base.SaveDeviceMediaStorage(cfg)
+}
+
+func (r *deviceChatStorage) GetDeviceMediaStorage(deviceID string) (*domainChatStorage.DeviceMediaStorage, error) {
+	return r.base.GetDeviceMediaStorage(deviceID)
+}
+
+func (r *deviceChatStorage) ListDeviceMediaStorage() ([]*domainChatStorage.DeviceMediaStorage, error) {
+	return r.base.ListDeviceMediaStorage()
+}
+
+func (r *deviceChatStorage) DeleteDeviceMediaStorage(deviceID string) error {
+	return r.base.DeleteDeviceMediaStorage(deviceID)
+}
+
 func (r *deviceChatStorage) GetLatestUnreadChatwootMessageLinkByChat(deviceID, waChatJID string) (*domainChatStorage.ChatwootMessageLink, error) {
 	targetDeviceID := deviceID
 	if targetDeviceID == "" {

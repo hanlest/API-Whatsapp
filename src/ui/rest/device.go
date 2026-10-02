@@ -41,7 +41,7 @@ func (handler *Device) ListDevices(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "List devices",
+		Message: "Listado de dispositivos",
 		Results: devices,
 	})
 }
@@ -54,7 +54,7 @@ func (handler *Device) GetDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device info",
+		Message: "Información del dispositivo",
 		Results: device,
 	})
 }
@@ -72,7 +72,7 @@ func (handler *Device) AddDevice(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "Invalid request body",
+			Message: "Cuerpo de la solicitud inválido",
 			Results: nil,
 		})
 	}
@@ -107,7 +107,7 @@ func (handler *Device) AddDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device added",
+		Message: "Dispositivo registrado correctamente",
 		Results: result,
 	})
 }
@@ -120,7 +120,7 @@ func (handler *Device) RemoveDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device removed",
+		Message: "Dispositivo eliminado",
 		Results: nil,
 	})
 }
@@ -133,7 +133,7 @@ func (handler *Device) LoginDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Login success",
+		Message: "Login con QR iniciado correctamente",
 		Results: map[string]any{
 			"device_id":   deviceID,
 			"qr_link":     fmt.Sprintf("%s://%s%s/%s", c.Scheme(), c.Host(), config.AppBasePath, response.ImagePath),
@@ -150,7 +150,7 @@ func (handler *Device) LoginDeviceWithCode(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Login with code started",
+		Message: "Login con código de emparejamiento iniciado",
 		Results: map[string]any{
 			"device_id": deviceID,
 			"pair_code": code,
@@ -166,7 +166,7 @@ func (handler *Device) LogoutDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Logout requested",
+		Message: "Cierre de sesión solicitado",
 		Results: nil,
 	})
 }
@@ -179,7 +179,7 @@ func (handler *Device) ReconnectDevice(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Reconnect requested",
+		Message: "Reconexión solicitada",
 		Results: nil,
 	})
 }
@@ -192,7 +192,7 @@ func (handler *Device) Status(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device status",
+		Message: "Estado del dispositivo",
 		Results: map[string]any{
 			"device_id":    deviceID,
 			"is_connected": isConnected,
@@ -215,7 +215,7 @@ func (handler *Device) UpdateDeviceWebhook(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "Invalid request body",
+			Message: "Cuerpo de la solicitud inválido",
 			Results: nil,
 		})
 	}
@@ -224,7 +224,7 @@ func (handler *Device) UpdateDeviceWebhook(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "webhook_url is required",
+			Message: "webhook_url es obligatorio",
 			Results: nil,
 		})
 	}
@@ -242,7 +242,7 @@ func (handler *Device) UpdateDeviceWebhook(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device webhook updated",
+		Message: "Webhook del dispositivo actualizado",
 		Results: map[string]any{
 			"device_id":                    deviceID,
 			"webhook_url":                  *req.WebhookURL,
@@ -267,7 +267,7 @@ func (handler *Device) GetDeviceWebhook(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Device webhook retrieved",
+		Message: "Configuración de webhook obtenida",
 		Results: map[string]any{
 			"device_id":   deviceID,
 			"webhook_url": webhookURL,

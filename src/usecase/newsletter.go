@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainNewsletter "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/newsletter"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"github.com/sirupsen/logrus"
@@ -119,20 +119,19 @@ func (service serviceNewsletter) DownloadMedia(ctx context.Context, request doma
 		return response, fmt.Errorf("newsletter message %d does not contain downloadable media", request.ServerID)
 	}
 
-	newsletterDir := utils.ExtractPhoneNumber(JID.String())
-	dateDir := filepath.Join(config.PathMedia, newsletterDir, message.Timestamp.Format("2006-01-02"))
-	if err = os.MkdirAll(dateDir, 0755); err != nil {
-		return response, fmt.Errorf("failed to create media directory: %w", err)
-	}
-
-	extractedMedia, err := utils.ExtractMedia(ctx, client, dateDir, downloadable)
+	extractedMedia, err := utils.ExtractMedia(ctx, client, deviceIDFromContext(ctx), downloadable)
 	if err != nil {
 		return response, fmt.Errorf("failed to download newsletter media: %w", err)
 	}
 
-	fileInfo, statErr := os.Stat(extractedMedia.MediaPath)
-	if statErr != nil {
-		logrus.Warnf("Could not get file size for %s: %v", extractedMedia.MediaPath, statErr)
+	var fileSize int64
+	if !storage.IsMediaRef(extractedMedia.MediaPath) {
+		fileInfo, statErr := os.Stat(extractedMedia.MediaPath)
+		if statErr != nil {
+			logrus.Warnf("Could not get file size for %s: %v", extractedMedia.MediaPath, statErr)
+		} else if fileInfo != nil {
+			fileSize = fileInfo.Size()
+		}
 	}
 
 	response.ServerID = request.ServerID
@@ -142,8 +141,8 @@ func (service serviceNewsletter) DownloadMedia(ctx context.Context, request doma
 	response.MimeType = extractedMedia.MimeType
 	response.Filename = filepath.Base(extractedMedia.MediaPath)
 	response.FilePath = extractedMedia.MediaPath
-	if fileInfo != nil {
-		response.FileSize = fileInfo.Size()
+	if fileSize > 0 {
+		response.FileSize = fileSize
 	}
 
 	return response, nil

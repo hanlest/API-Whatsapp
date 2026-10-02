@@ -74,5 +74,5 @@ func TestChatJIDParamRejectsMalformedEscape(t *testing.T) {
 	var envelope utils.ResponseData
 	require.NoError(t, json.Unmarshal(body, &envelope), "error must be the JSON envelope, got: %s", body)
 	require.Equal(t, "BAD_REQUEST", envelope.Code)
-	require.Contains(t, envelope.Message, "invalid chat_jid path parameter")
+	require.Contains(t, envelope.Message, "parámetro chat_jid inválido")
 }

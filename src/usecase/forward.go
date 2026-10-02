@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/validations"
 	"go.mau.fi/whatsmeow"
@@ -122,13 +122,17 @@ func (service serviceSend) reuploadForwardMessage(ctx context.Context, client *w
 		return nil, err
 	}
 
-	extracted, err := utils.ExtractMedia(ctx, client, config.PathSendItems, downloadable)
+	extracted, err := utils.ExtractMedia(ctx, client, deviceIDFromContext(ctx), downloadable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download media for re-upload: %w", err)
 	}
-	defer os.Remove(extracted.MediaPath)
+	localPath, cleanup, err := storage.MaterializeToTempFile(ctx, extracted.MediaPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to materialize media for re-upload: %w", err)
+	}
+	defer cleanup()
 
-	data, err := os.ReadFile(extracted.MediaPath)
+	data, err := os.ReadFile(localPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read downloaded media: %w", err)
 	}

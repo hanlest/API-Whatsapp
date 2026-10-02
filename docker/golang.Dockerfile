@@ -11,6 +11,8 @@ RUN go mod download
 
 # Copy source and build
 COPY ./src .
+COPY ./docs/openapi.yaml ./docs/openapi.yaml
+COPY ./docs/openapi.yaml ./ui/rest/swagger/openapi.yaml
 RUN go build -ldflags="-w -s" -o /app/whatsapp
 
 #############################
@@ -31,6 +33,7 @@ WORKDIR /app
 
 # Copy compiled from builder.
 COPY --from=builder /app/whatsapp /app/whatsapp
+COPY --from=builder /whatsapp/docs/openapi.yaml /app/docs/openapi.yaml
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && chown -R gowauser:gowa /app
 

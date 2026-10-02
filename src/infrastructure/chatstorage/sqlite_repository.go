@@ -1422,6 +1422,75 @@ func (r *SQLiteRepository) CountChatwootDeviceConfigs() (int, error) {
 	return count, err
 }
 
+const deviceMediaStorageColumns = `device_id, bucket, folder_name, enabled, created_at, updated_at`
+
+func (r *SQLiteRepository) scanDeviceMediaStorage(row interface {
+	Scan(dest ...any) error
+}) (*domainChatStorage.DeviceMediaStorage, error) {
+	cfg := &domainChatStorage.DeviceMediaStorage{}
+	err := row.Scan(&cfg.DeviceID, &cfg.Bucket, &cfg.FolderName, &cfg.Enabled, &cfg.CreatedAt, &cfg.UpdatedAt)
+	return cfg, err
+}
+
+func (r *SQLiteRepository) SaveDeviceMediaStorage(cfg *domainChatStorage.DeviceMediaStorage) error {
+	if cfg == nil || strings.TrimSpace(cfg.DeviceID) == "" {
+		return fmt.Errorf("device media storage requires a device id")
+	}
+	now := time.Now()
+	if cfg.CreatedAt.IsZero() {
+		cfg.CreatedAt = now
+	}
+	cfg.UpdatedAt = now
+	_, err := r.db.Exec(`
+		INSERT INTO device_media_storage (device_id, bucket, folder_name, enabled, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(device_id) DO UPDATE SET
+			bucket = excluded.bucket,
+			folder_name = excluded.folder_name,
+			enabled = excluded.enabled,
+			updated_at = excluded.updated_at
+	`, cfg.DeviceID, cfg.Bucket, cfg.FolderName, cfg.Enabled, cfg.CreatedAt, cfg.UpdatedAt)
+	return err
+}
+
+func (r *SQLiteRepository) GetDeviceMediaStorage(deviceID string) (*domainChatStorage.DeviceMediaStorage, error) {
+	deviceID = strings.TrimSpace(deviceID)
+	if deviceID == "" {
+		return nil, fmt.Errorf("device id is required")
+	}
+	cfg, err := r.scanDeviceMediaStorage(r.db.QueryRow(
+		"SELECT "+deviceMediaStorageColumns+" FROM device_media_storage WHERE device_id = ? LIMIT 1", deviceID))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return cfg, err
+}
+
+func (r *SQLiteRepository) ListDeviceMediaStorage() ([]*domainChatStorage.DeviceMediaStorage, error) {
+	rows, err := r.db.Query("SELECT " + deviceMediaStorageColumns + " FROM device_media_storage ORDER BY device_id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*domainChatStorage.DeviceMediaStorage
+	for rows.Next() {
+		cfg, err := r.scanDeviceMediaStorage(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, cfg)
+	}
+	return out, rows.Err()
+}
+
+func (r *SQLiteRepository) DeleteDeviceMediaStorage(deviceID string) error {
+	if strings.TrimSpace(deviceID) == "" {
+		return fmt.Errorf("device id is required")
+	}
+	_, err := r.db.Exec("DELETE FROM device_media_storage WHERE device_id = ?", deviceID)
+	return err
+}
+
 // GetChatMessageCount returns the number of messages in a chat
 func (r *SQLiteRepository) GetChatMessageCount(chatJID string) (int64, error) {
 	return r.getCount("SELECT COUNT(*) FROM messages WHERE chat_jid = ?", chatJID)
@@ -2803,6 +2872,15 @@ func (r *SQLiteRepository) getMigrations() []string {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (device_id, chat_jid, poll_message_id)
+		)`,
+		// Migration 45: Per-device media storage bucket/folder for MiniCloud
+		`CREATE TABLE IF NOT EXISTS device_media_storage (
+			device_id VARCHAR(255) PRIMARY KEY,
+			bucket VARCHAR(255) NOT NULL DEFAULT '',
+			folder_name VARCHAR(255) NOT NULL DEFAULT '',
+			enabled BOOLEAN NOT NULL DEFAULT 1,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 	}
 }

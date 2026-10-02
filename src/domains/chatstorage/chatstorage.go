@@ -114,6 +114,17 @@ type ChatwootDeviceConfig struct {
 	UpdatedAt   time.Time `db:"updated_at"`
 }
 
+// DeviceMediaStorage is per-device MiniCloud/local media layout: bucket (may be
+// shared across devices), optional folder override, and enable flag.
+type DeviceMediaStorage struct {
+	DeviceID   string    `db:"device_id"`
+	Bucket     string    `db:"bucket"`
+	FolderName string    `db:"folder_name"`
+	Enabled    bool      `db:"enabled"`
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
+}
+
 // ChatwootForwardEvent is a durable retry record for a live WhatsApp event
 // that could not be delivered to Chatwoot because of a transient failure.
 type ChatwootForwardEvent struct {

@@ -46,7 +46,7 @@ func (controller *Chat) ListChats(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get chat list",
+		Message: "Lista de chats obtenida correctamente",
 		Results: response,
 	})
 }
@@ -60,7 +60,7 @@ func (controller *Chat) GetChatMessages(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "invalid chat_jid path parameter: " + err.Error(),
+			Message: "parámetro chat_jid inválido: " + err.Error(),
 			Results: nil,
 		})
 	}
@@ -92,7 +92,7 @@ func (controller *Chat) GetChatMessages(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get chat messages",
+		Message: "Mensajes del chat obtenidos correctamente",
 		Results: response,
 	})
 }
@@ -106,7 +106,7 @@ func (controller *Chat) PinChat(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "invalid chat_jid path parameter: " + err.Error(),
+			Message: "parámetro chat_jid inválido: " + err.Error(),
 			Results: nil,
 		})
 	}
@@ -117,7 +117,7 @@ func (controller *Chat) PinChat(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "Invalid request body",
+			Message: "Cuerpo de la solicitud inválido",
 			Results: nil,
 		})
 	}
@@ -142,7 +142,7 @@ func (controller *Chat) SetDisappearingTimer(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "invalid chat_jid path parameter: " + err.Error(),
+			Message: "parámetro chat_jid inválido: " + err.Error(),
 			Results: nil,
 		})
 	}
@@ -153,7 +153,7 @@ func (controller *Chat) SetDisappearingTimer(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "Invalid request body",
+			Message: "Cuerpo de la solicitud inválido",
 			Results: nil,
 		})
 	}
@@ -178,7 +178,7 @@ func (controller *Chat) ArchiveChat(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "invalid chat_jid path parameter: " + err.Error(),
+			Message: "parámetro chat_jid inválido: " + err.Error(),
 			Results: nil,
 		})
 	}
@@ -189,7 +189,7 @@ func (controller *Chat) ArchiveChat(c fiber.Ctx) error {
 		return c.Status(400).JSON(utils.ResponseData{
 			Status:  400,
 			Code:    "BAD_REQUEST",
-			Message: "Invalid request body",
+			Message: "Cuerpo de la solicitud inválido",
 			Results: nil,
 		})
 	}

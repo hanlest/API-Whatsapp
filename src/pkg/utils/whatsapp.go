@@ -9,13 +9,11 @@ import (
 	"fmt"
 	"mime"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
@@ -23,6 +21,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	pkgError "github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/error"
 	"go.mau.fi/whatsmeow"
@@ -868,8 +867,8 @@ type ExtractedMedia struct {
 	Caption   string `json:"caption"`
 }
 
-// ExtractMedia is a helper function to extract media from whatsapp
-func ExtractMedia(ctx context.Context, client *whatsmeow.Client, storageLocation string, mediaFile whatsmeow.DownloadableMessage) (extractedMedia ExtractedMedia, err error) {
+// ExtractMedia downloads WhatsApp media and stores it via the configured media backend.
+func ExtractMedia(ctx context.Context, client *whatsmeow.Client, deviceID string, mediaFile whatsmeow.DownloadableMessage) (extractedMedia ExtractedMedia, err error) {
 	if mediaFile == nil {
 		logrus.Info("Skip download because data is nil")
 		return extractedMedia, nil
@@ -907,8 +906,11 @@ func ExtractMedia(ctx context.Context, client *whatsmeow.Client, storageLocation
 
 	extension := determineMediaExtension(originalFilename, extractedMedia.MimeType)
 
-	extractedMedia.MediaPath = fmt.Sprintf("%s/%d-%s%s", storageLocation, time.Now().Unix(), uuid.NewString(), extension)
-	err = os.WriteFile(extractedMedia.MediaPath, data, 0600)
+	deviceID = strings.TrimSpace(deviceID)
+	if deviceID == "" {
+		deviceID = "default"
+	}
+	extractedMedia.MediaPath, err = storage.SaveMedia(ctx, deviceID, data, extractedMedia.MimeType, extension, storage.MediaKindIncoming)
 	if err != nil {
 		return extractedMedia, err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/chatwoot"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/storage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -463,6 +464,25 @@ func lookupContactDisplayName(ctx context.Context, jid string) string {
 // when WhatsappAutoDownloadMedia is disabled and the field carries only
 // {"url", ...} (Chatwoot can't render a remote URL as an attachment, so
 // we skip rather than POST a URL it can't fetch).
+func materializeChatwootAttachments(ctx context.Context, paths []string) ([]string, []func(), error) {
+	out := make([]string, 0, len(paths))
+	cleanups := make([]func(), 0, len(paths))
+	for _, p := range paths {
+		local, cleanup, err := storage.MaterializeToTempFile(ctx, p)
+		if err != nil {
+			for _, c := range cleanups {
+				c()
+			}
+			return nil, nil, err
+		}
+		out = append(out, local)
+		if cleanup != nil {
+			cleanups = append(cleanups, cleanup)
+		}
+	}
+	return out, cleanups, nil
+}
+
 func extractMediaPath(mediaData any) string {
 	switch v := mediaData.(type) {
 	case string:
@@ -1300,7 +1320,17 @@ func syncPayloadToChatwoot(ctx context.Context, payload map[string]any, eventNam
 		}
 	}
 
-	result, err := syncMessageToChatwoot(cw, info, content, attachments, msgOpts)
+	localAttachments, cleanups, matErr := materializeChatwootAttachments(ctx, attachments)
+	if matErr != nil {
+		return matErr
+	}
+	defer func() {
+		for _, cleanup := range cleanups {
+			cleanup()
+		}
+	}()
+
+	result, err := syncMessageToChatwoot(cw, info, content, localAttachments, msgOpts)
 	if err != nil {
 		return err
 	}

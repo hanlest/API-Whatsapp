@@ -20,6 +20,7 @@ import (
 	uimcp "github.com/aldinokemal/go-whatsapp-web-multidevice/ui/mcp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/helpers"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/swagger"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/middleware"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
 	"github.com/gofiber/fiber/v3"
@@ -118,7 +119,7 @@ func restServer(_ *cobra.Command, _ []string) {
 		}()
 	}
 
-	if len(config.AppBasicAuthCredential) > 0 {
+	if config.BasicAuthEnabled() {
 		account := make(map[string]string)
 		for _, basicAuth := range config.AppBasicAuthCredential {
 			ba := strings.Split(basicAuth, ":")
@@ -153,8 +154,20 @@ func restServer(_ *cobra.Command, _ []string) {
 	// Device management routes (no device_id required)
 	rest.InitRestDevice(apiGroup, deviceUsecase)
 
+	mediaStorageHandler := &rest.MediaStorageHandler{
+		ChatStorageRepo: chatStorageRepo,
+		DeviceManager:   dm,
+	}
+	apiGroup.Get("/media-storage/configs", mediaStorageHandler.ListMediaStorageConfigs)
+	apiGroup.Get("/devices/:device_id/media-storage", mediaStorageHandler.GetMediaStorageConfig)
+	apiGroup.Put("/devices/:device_id/media-storage", mediaStorageHandler.UpsertMediaStorageConfig)
+	apiGroup.Delete("/devices/:device_id/media-storage", mediaStorageHandler.DeleteMediaStorageConfig)
+	apiGroup.Get("/devices/:device_id/media/*", mediaStorageHandler.ProxyDeviceMedia)
+
 	// App info (version, limits) for standalone UIs; no device required
 	rest.InitRestAppInfo(apiGroup)
+
+	swagger.Register(apiGroup)
 
 	// MCP endpoint — same usecase instances as REST, so both surfaces share
 	// one whatsmeow session. With OAuth disabled it keeps the existing global

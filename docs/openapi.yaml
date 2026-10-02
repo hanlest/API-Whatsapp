@@ -3,42 +3,45 @@ info:
   title: WhatsApp API MultiDevice
   version: 9.0.0
   description: |
-    This API is used for sending whatsapp via API.
+    API HTTP para operar WhatsApp Web (multidispositivo): envío de mensajes, chats, grupos,
+    dispositivos, webhooks y opcionalmente Chatwoot.
 
-    The web dashboard is a separate project (gowa-ui); the server downloads its
-    latest release asset and serves it at `/` (or returns a JSON banner when
-    APP_UI_ENABLED=false).
+    **Panel web:** el dashboard [gowa-ui](https://github.com/aldinokemal/gowa-ui) se descarga
+    al arrancar y se sirve en `/` (o un aviso JSON si `APP_UI_ENABLED=false`).
 
-    Device scoping:
-    - Send `X-Device-Id` on all device-scoped REST calls.
-    - WebSocket: connect to `/ws?device_id=<id>`.
-    - WebSocket auth (when basic auth is enabled): browsers cannot set an
-      Authorization header on WebSocket connections, so also pass
-      `&authorization=<base64(user:pass)>` in the query string. Use TLS in
-      production since the credential is visible in the URL.
-servers:
-  - url: http://localhost:3000
+    **Documentación interactiva:** Swagger UI en `/docs/` (misma autenticación Basic Auth que la API).
+
+    **Alcance por dispositivo:**
+    - Enviá el header `X-Device-Id` en todas las rutas que operan sobre una cuenta concreta.
+    - También podés usar el query `device_id` donde la operación lo admita.
+    - WebSocket: `/ws?device_id=<id>`.
+    - Con Basic Auth activo, los navegadores no pueden enviar `Authorization` en WebSocket;
+      podés usar `&authorization=<base64(usuario:contraseña)>` en la URL (usá TLS en producción).
 tags:
   - name: app
-    description: Initial Connection to Whatsapp server
+    description: Conexión inicial, sesión y metadatos del servidor
   - name: device
-    description: Device management for multi-device support
+    description: Alta, login y webhooks por cuenta (multidispositivo)
   - name: user
-    description: Getting information
+    description: Perfil, contactos, privacidad y listas de la cuenta
   - name: send
-    description: Send Message (Text/Image/File/Video).
+    description: Envío de mensajes y presencia (texto, medios, ubicación, encuestas, etc.)
   - name: message
-    description: Message manipulation (revoke/react/update).
+    description: Acciones sobre mensajes (reaccionar, editar, borrar, reenviar, descargar medios)
   - name: call
-    description: Call management (reject incoming calls)
+    description: Llamadas entrantes (rechazo automático o manual)
   - name: chat
-    description: Chat conversations and messaging
+    description: Listado de chats, historial y ajustes de conversación
   - name: group
-    description: Group setting
+    description: Creación, miembros, permisos e invitaciones de grupos
   - name: newsletter
-    description: newsletter setting
+    description: Canales / newsletters (seguir, mensajes y medios)
   - name: chatwoot
-    description: Chatwoot integration for customer support
+    description: Integración con Chatwoot (sync, webhooks y config por dispositivo)
+  - name: media-storage
+    description: Almacenamiento de medios (local o MiniCloud) y proxy de descarga
+  - name: docs
+    description: Especificación OpenAPI y Swagger UI
 security:
   - basicAuth: []
 
@@ -48,19 +51,20 @@ paths:
       operationId: health
       tags:
         - app
-      summary: Health check
-      description: Public health probe registered at `/health`; it is not prefixed by `APP_BASE_PATH`.
+      summary: Comprobar estado del servicio
+      description: |
+        Sonda pública de salud en `/health` (sin prefijo `APP_BASE_PATH`). Útil para Docker/Kubernetes.
       security: []
       responses:
         '200':
-          description: Service healthy
+          description: Servicio disponible
           content:
             text/plain:
               schema:
                 type: string
                 example: OK
         '503':
-          description: Service unavailable
+          description: Servicio no disponible
           content:
             text/plain:
               schema:
@@ -71,18 +75,18 @@ paths:
       operationId: appLogin
       tags:
         - app
-      summary: Login to whatsapp server
+      summary: Iniciar sesión (código QR)
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -92,7 +96,7 @@ paths:
       operationId: appLoginWithCode
       tags:
         - app
-      summary: Login with pairing code
+      summary: Iniciar sesión con código de emparejamiento
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: phone
@@ -103,13 +107,13 @@ paths:
           description: Your phone number
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginWithCodeResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -119,7 +123,7 @@ paths:
       operationId: appPasskeyStatus
       tags:
         - app
-      summary: Get pending passkey pairing state
+      summary: Estado del emparejamiento passkey pendiente
       description: >
         Passkey pairing is initiated from the phone during QR login. When the phone requests it,
         the server sends a WebAuthn challenge which is stored here (also broadcast over the
@@ -128,13 +132,13 @@ paths:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PasskeyStatusResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -144,7 +148,7 @@ paths:
       operationId: appPasskeyResponse
       tags:
         - app
-      summary: Submit the WebAuthn assertion for passkey pairing
+      summary: Enviar aserción WebAuthn (passkey)
       description: >
         Send the WebAuthn assertion produced for the pending challenge (see GET /app/passkey).
         The assertion must be produced by an authenticator holding the WhatsApp account's passkey,
@@ -162,19 +166,19 @@ paths:
               $ref: '#/components/schemas/WebAuthnAssertion'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -184,7 +188,7 @@ paths:
       operationId: appPasskeyConfirm
       tags:
         - app
-      summary: Confirm the passkey pairing code
+      summary: Confirmar código de emparejamiento passkey
       description: >
         Confirms that the pairing code from the PASSKEY_CONFIRMATION event was shown to the user
         and matches the code displayed on the phone. Only needed when skip_handoff_ux is false.
@@ -192,13 +196,13 @@ paths:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -208,7 +212,7 @@ paths:
       operationId: appLogout
       tags:
         - app
-      summary: Logout the active device (keeps the device slot)
+      summary: Cerrar sesión (conserva el slot del dispositivo)
       description: >-
         Logs the active device out of WhatsApp and clears its session. The device
         slot (id and display name) is kept, so it stays listed (disconnected) and
@@ -217,13 +221,13 @@ paths:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -233,18 +237,18 @@ paths:
       operationId: appReconnect
       tags:
         - app
-      summary: Reconnecting to whatsapp server
+      summary: Reconectar con los servidores de WhatsApp
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -254,20 +258,20 @@ paths:
       operationId: appDevices
       tags:
         - app
-      summary: Get list connected devices
+      summary: Listar dispositivos conectados (legacy /app)
       description: >
         Returns all device IDs known to the server, including placeholders
         created via the device API. Devices are now persisted in the storage
         registry so IDs remain stable after application restarts.
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeviceResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -277,13 +281,13 @@ paths:
       operationId: appStatus
       tags:
         - app
-      summary: Get connection status
+      summary: Estado de conexión de la sesión activa
       description: Check whether the WhatsApp client is connected and logged in
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -316,13 +320,13 @@ paths:
                         description: WhatsApp JID of the logged-in account (empty until login)
                         example: '6289685028129@s.whatsapp.net'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -332,14 +336,14 @@ paths:
       operationId: appInfo
       tags:
         - app
-      summary: Get server metadata
+      summary: Metadatos del servidor (versión, límites de medios)
       description: >
         Returns server version, base path, media size limits, and enabled
         features. Requires no device; intended for standalone UIs (gowa-ui)
         that previously read these values from the embedded dashboard HTML.
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -353,7 +357,7 @@ paths:
                     example: SUCCESS
                   message:
                     type: string
-                    example: Fetch app info success
+                    example: Metadatos del servidor obtenidos correctamente
                   results:
                     type: object
                     properties:
@@ -385,7 +389,7 @@ paths:
                         type: boolean
                         description: Whether Chatwoot integration routes are registered
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -397,17 +401,17 @@ paths:
       operationId: listDevices
       tags:
         - device
-      summary: List all devices
+      summary: Listar dispositivos registrados
       description: Returns all registered devices with their connection status
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeviceListResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -416,7 +420,7 @@ paths:
       operationId: addDevice
       tags:
         - device
-      summary: Add a new device
+      summary: Registrar un nuevo dispositivo / cuenta
       description: Create a new device slot for multi-device management
       requestBody:
         content:
@@ -446,19 +450,19 @@ paths:
                   example: false
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeviceAddResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -469,7 +473,7 @@ paths:
       operationId: getDevice
       tags:
         - device
-      summary: Get device info
+      summary: Información de un dispositivo
       description: Get detailed information about a specific device
       parameters:
         - name: device_id
@@ -480,7 +484,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -492,7 +496,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -501,7 +505,7 @@ paths:
       operationId: removeDevice
       tags:
         - device
-      summary: Remove a device
+      summary: Eliminar un dispositivo y sus datos asociados
       description: >-
         Remove a device slot from the server. This also logs it out of WhatsApp and
         clears its session and chat data. To log out while keeping the slot, use the
@@ -515,7 +519,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -527,7 +531,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -538,7 +542,7 @@ paths:
       operationId: loginDevice
       tags:
         - device
-      summary: Login a device with QR code
+      summary: Login del dispositivo con código QR
       description: >-
         Start QR pairing for a specific device slot and return a link to the QR
         image to scan. Equivalent to `GET /app/login` with
@@ -552,7 +556,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -564,7 +568,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -575,7 +579,7 @@ paths:
       operationId: loginDeviceWithCode
       tags:
         - device
-      summary: Login a device with pairing code
+      summary: Login del dispositivo con código numérico
       description: >-
         Start pairing-code login for a specific device slot and return the code to
         enter on the phone. Equivalent to `GET /app/login-with-code` with
@@ -596,7 +600,7 @@ paths:
           description: Phone number to pair with
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -608,7 +612,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -619,7 +623,7 @@ paths:
       operationId: logoutDevice
       tags:
         - device
-      summary: Logout device
+      summary: Cerrar sesión del dispositivo
       description: >-
         Logs a specific device out of WhatsApp and clears its session, but keeps the
         device slot (id and display name) so it can be re-paired under the same id.
@@ -633,7 +637,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -645,7 +649,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -656,7 +660,7 @@ paths:
       operationId: reconnectDevice
       tags:
         - device
-      summary: Reconnect device
+      summary: Forzar reconexión del dispositivo
       description: Reconnect a specific device to WhatsApp
       parameters:
         - name: device_id
@@ -667,7 +671,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -679,7 +683,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -690,7 +694,7 @@ paths:
       operationId: getDeviceStatus
       tags:
         - device
-      summary: Get device connection status
+      summary: Estado de conexión del dispositivo
       description: Get the current connection status of a specific device
       parameters:
         - name: device_id
@@ -701,7 +705,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -713,7 +717,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -724,7 +728,7 @@ paths:
       operationId: getDeviceWebhook
       tags:
         - device
-      summary: Get device webhook configuration
+      summary: Obtener webhook configurado del dispositivo
       description: Get the webhook configuration for a specific device. Returns empty values if no device-specific webhook is set.
       parameters:
         - name: device_id
@@ -735,7 +739,7 @@ paths:
           description: Device ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -780,7 +784,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -789,7 +793,7 @@ paths:
       operationId: updateDeviceWebhook
       tags:
         - device
-      summary: Set device webhook configuration
+      summary: Configurar webhook del dispositivo
       description: |
         Set a custom webhook configuration for a specific device. When set, webhook events for this device
         will be sent to this URL instead of the global webhook URL. Device-level `webhook_secret`,
@@ -830,7 +834,7 @@ paths:
                 - webhook_url
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -869,7 +873,7 @@ paths:
                         description: Whether TLS verification is skipped for this device webhook
                         example: false
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -881,7 +885,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -892,7 +896,7 @@ paths:
       operationId: userInfo
       tags:
         - user
-      summary: User Info
+      summary: Información del usuario de WhatsApp
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: phone
@@ -903,19 +907,19 @@ paths:
           description: Phone number with country code
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserInfoResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -925,7 +929,7 @@ paths:
       operationId: userAvatar
       tags:
         - user
-      summary: User Avatar
+      summary: Obtener avatar del usuario
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: phone
@@ -948,19 +952,19 @@ paths:
           description: Whether to fetch a community avatar
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserAvatarResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -969,7 +973,7 @@ paths:
       operationId: userChangeAvatar
       tags:
         - user
-      summary: User Change Avatar
+      summary: Cambiar avatar de la cuenta
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -984,19 +988,19 @@ paths:
                   description: Avatar to send
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1006,7 +1010,7 @@ paths:
       operationId: userChangePushName
       tags:
         - user
-      summary: User Change Push Name
+      summary: Cambiar nombre visible (push name)
       description: Update the display name (push name) shown to others in WhatsApp
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -1024,19 +1028,19 @@ paths:
                 - push_name
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1046,18 +1050,18 @@ paths:
       operationId: userMyPrivacy
       tags:
         - user
-      summary: User My Privacy Setting
+      summary: Consultar ajustes de privacidad
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserPrivacyResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1067,7 +1071,7 @@ paths:
       operationId: userMyGroups
       tags:
         - user
-      summary: User My List Groups
+      summary: Listar mis grupos
       description: |
         Get all groups that the authenticated user has joined.
 
@@ -1084,13 +1088,13 @@ paths:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserGroupResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1101,18 +1105,18 @@ paths:
       operationId: userMyNewsletter
       tags:
         - user
-      summary: User My List Groups
+      summary: Listar mis grupos
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NewsletterResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1122,18 +1126,18 @@ paths:
       operationId: userMyContacts
       tags:
         - user
-      summary: Get list of user contacts
+      summary: Listar contactos de la agenda
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MyListContactsResponse'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1143,7 +1147,7 @@ paths:
       operationId: userCheck
       tags:
         - user
-      summary: Check if user is on WhatsApp
+      summary: Comprobar si un número tiene WhatsApp
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: phone
@@ -1154,19 +1158,19 @@ paths:
           description: Phone number with country code
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserCheckResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1176,7 +1180,7 @@ paths:
       operationId: userBusinessProfile
       tags:
         - user
-      summary: Get Business Profile Information
+      summary: Perfil comercial (Business)
       description: Retrieve detailed business profile information for a WhatsApp business account
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -1189,19 +1193,19 @@ paths:
           description: Phone number with country code of the business account
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BusinessProfileResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1212,7 +1216,7 @@ paths:
       operationId: sendMessage
       tags:
         - send
-      summary: Send Message
+      summary: Enviar mensaje de texto
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1251,19 +1255,19 @@ paths:
                     Use special keyword "@everyone" to mention all group participants.
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1273,7 +1277,7 @@ paths:
       operationId: sendImage
       tags:
         - send
-      summary: Send Image
+      summary: Enviar imagen
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1324,19 +1328,19 @@ paths:
                   description: Whether this is a forwarded message
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1346,7 +1350,7 @@ paths:
       operationId: sendAudio
       tags:
         - send
-      summary: Send Audio
+      summary: Enviar audio o nota de voz
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1385,19 +1389,19 @@ paths:
                   description: "Disappearing message duration in seconds. Allowed values: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)."
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1407,7 +1411,7 @@ paths:
       operationId: sendFile
       tags:
         - send
-      summary: Send File
+      summary: Enviar documento / archivo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1446,19 +1450,19 @@ paths:
                   description: "Disappearing message duration in seconds. Allowed values: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)."
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1468,7 +1472,7 @@ paths:
       operationId: sendSticker
       tags:
         - send
-      summary: Send Sticker
+      summary: Enviar sticker
       description: Send sticker with automatic conversion to WebP format
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -1500,19 +1504,19 @@ paths:
                   description: Whether this is a forwarded sticker
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1522,7 +1526,7 @@ paths:
       operationId: sendVideo
       tags:
         - send
-      summary: Send Video
+      summary: Enviar video
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1577,19 +1581,19 @@ paths:
                   description: Whether this is a forwarded message
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1599,7 +1603,7 @@ paths:
       operationId: sendContact
       tags:
         - send
-      summary: Send Contact
+      summary: Enviar contacto (vCard)
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1630,19 +1634,19 @@ paths:
                   description: "Disappearing message duration in seconds. Allowed values: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)."
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1652,7 +1656,7 @@ paths:
       operationId: sendLink
       tags:
         - send
-      summary: Send Link
+      summary: Enviar enlace con vista previa
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1683,19 +1687,19 @@ paths:
                   description: "Disappearing message duration in seconds. Allowed values: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)."
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1705,7 +1709,7 @@ paths:
       operationId: sendLocation
       tags:
         - send
-      summary: Send Location
+      summary: Enviar ubicación
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1736,19 +1740,19 @@ paths:
                   description: "Disappearing message duration in seconds. Allowed values: 0 (no expiry), 86400 (24h), 604800 (7d), 7776000 (90d)."
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1758,7 +1762,7 @@ paths:
       operationId: sendPoll
       tags:
         - send
-      summary: Send Poll / Vote
+      summary: Enviar encuesta
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1797,19 +1801,19 @@ paths:
                 - max_answer
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1819,7 +1823,7 @@ paths:
       operationId: sendPresence
       tags:
         - send
-      summary: Send presence status
+      summary: Publicar estado de presencia global
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -1842,19 +1846,19 @@ paths:
                 - type
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1864,7 +1868,7 @@ paths:
       operationId: sendChatPresence
       tags:
         - send
-      summary: Send chat presence (typing indicator)
+      summary: Indicador de escritura en un chat
       description: Send typing indicator to start or stop showing that you are composing a message
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -1889,19 +1893,19 @@ paths:
                 - action
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1911,7 +1915,7 @@ paths:
       operationId: revokeMessage
       tags:
         - message
-      summary: Revoke Message
+      summary: Revocar mensaje para todos
       description: |
         Revoke (delete for everyone) a message. Revokes the bot's own message by default.
         If the target message was sent by another user and is present in chat storage,
@@ -1938,19 +1942,19 @@ paths:
                   description: Phone number with country code
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -1960,7 +1964,7 @@ paths:
       operationId: deleteMessage
       tags:
         - message
-      summary: Delete Message
+      summary: Eliminar mensaje (solo en este dispositivo)
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -1981,19 +1985,19 @@ paths:
                   description: Phone number with country code
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2003,7 +2007,7 @@ paths:
       operationId: reactMessage
       tags:
         - message
-      summary: Send reaction to message
+      summary: Reaccionar a un mensaje
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -2028,19 +2032,19 @@ paths:
                   description: Emoji to react
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2050,7 +2054,7 @@ paths:
       operationId: updateMessage
       tags:
         - message
-      summary: Edit message by message ID before 15 minutes
+      summary: Editar mensaje (ventana ~15 min)
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -2078,19 +2082,19 @@ paths:
                 - message
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2100,7 +2104,7 @@ paths:
       operationId: readMessage
       tags:
         - message
-      summary: Mark as read message
+      summary: Marcar mensaje como leído
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -2123,19 +2127,19 @@ paths:
                 - phone
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2145,7 +2149,7 @@ paths:
       operationId: markMessagePlayed
       tags:
         - message
-      summary: Mark an audio message as played
+      summary: Marcar audio como reproducido
       description: >-
         Sends WhatsApp's played receipt for an incoming audio message or voice
         note. The message must exist in the active device's chat storage and
@@ -2179,13 +2183,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2195,7 +2199,7 @@ paths:
       operationId: starMessage
       tags:
         - message
-      summary: Star message
+      summary: Destacar mensaje
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -2218,19 +2222,19 @@ paths:
                 - phone
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2240,7 +2244,7 @@ paths:
       operationId: unstarMessage
       tags:
         - message
-      summary: Unstar message
+      summary: Quitar destacado
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - in: path
@@ -2263,19 +2267,19 @@ paths:
                 - phone
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2285,7 +2289,7 @@ paths:
       operationId: forwardMessage
       tags:
         - message
-      summary: Forward Message
+      summary: Reenviar mensaje a otro chat
       description: |
         Forward a message that exists in local chat storage to another chat by message ID.
         Text and standard media types (image, video, video note, audio, document, sticker) are supported.
@@ -2321,19 +2325,19 @@ paths:
                   description: Skip media reference reuse and re-upload media before sending
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SendResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2343,7 +2347,7 @@ paths:
       operationId: downloadMessageMedia
       tags:
         - message
-      summary: Download media from message
+      summary: Descargar medios de un mensaje almacenado
       description: Download media content (image, video, audio, document) from a message
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2363,7 +2367,7 @@ paths:
           example: '6289685028129@s.whatsapp.net'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
@@ -2405,7 +2409,7 @@ paths:
                         type: integer
                         example: 524288
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -2417,7 +2421,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2428,7 +2432,7 @@ paths:
       operationId: rejectCall
       tags:
         - call
-      summary: Reject an incoming call
+      summary: Rechazar llamada entrante
       description: |
         Programmatically reject a specific incoming call. This endpoint allows selective call rejection
         based on your application logic (e.g., time-of-day rules, caller whitelists, agent availability).
@@ -2469,13 +2473,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request (missing or invalid fields)
+          description: Solicitud inválida (missing or invalid fields)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error (call already ended, not connected, etc.)
+          description: Error interno del servidor (call already ended, not connected, etc.)
           content:
             application/json:
               schema:
@@ -2486,7 +2490,7 @@ paths:
       operationId: listChats
       tags:
         - chat
-      summary: Get list of chats
+      summary: Listar conversaciones
       description: Retrieve a list of chat conversations with their basic information
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2521,19 +2525,19 @@ paths:
           description: Filter by archived status. true = archived only, false = non-archived only. Omit to return all chats.
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatListResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2549,7 +2553,7 @@ paths:
       operationId: getChatMessages
       tags:
         - chat
-      summary: Get messages from a specific chat
+      summary: Historial de mensajes de un chat
       description: Retrieve messages from a specific chat conversation with filtering options
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2603,13 +2607,13 @@ paths:
           description: Search messages by content text
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatMessagesResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -2627,7 +2631,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2637,7 +2641,7 @@ paths:
       operationId: pinChat
       tags:
         - chat
-      summary: Pin or unpin a chat
+      summary: Fijar o desfijar chat
       description: Pin or unpin a chat conversation to the top of the chat list
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2662,13 +2666,13 @@ paths:
                 - pinned
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PinChatResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -2686,7 +2690,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2697,7 +2701,7 @@ paths:
       operationId: setDisappearingTimer
       tags:
         - chat
-      summary: Set disappearing messages timer
+      summary: Configurar mensajes temporales
       description: Set or disable disappearing messages for a chat. Valid timer values are 0 (off), 86400 (24h), 604800 (7d), 7776000 (90d).
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2722,19 +2726,19 @@ paths:
                 - timer_seconds
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetDisappearingTimerResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2745,7 +2749,7 @@ paths:
       operationId: archiveChat
       tags:
         - chat
-      summary: Archive or unarchive a chat
+      summary: Archivar o desarchivar chat
       description: Archive or unarchive a chat conversation. Archived chats are hidden from the main chat list.
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -2770,13 +2774,13 @@ paths:
                 - archived
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ArchiveChatResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -2794,7 +2798,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorNotFound'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2805,7 +2809,7 @@ paths:
       operationId: groupInfo
       tags:
         - group
-      summary: Group Info
+      summary: Información del grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: group_id
@@ -2816,19 +2820,19 @@ paths:
           description: WhatsApp Group ID
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupInfoResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2838,7 +2842,7 @@ paths:
       operationId: createGroup
       tags:
         - group
-      summary: Create group and add participant
+      summary: Crear grupo e invitar participantes
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -2864,19 +2868,19 @@ paths:
                     - '6839241294719274'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateGroupResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2886,7 +2890,7 @@ paths:
       operationId: getGroupParticipants
       tags:
         - group
-      summary: Get list of participants in a group
+      summary: Listar participantes del grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: group_id
@@ -2898,19 +2902,19 @@ paths:
           description: The group ID to fetch participants for
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupParticipantsResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2919,7 +2923,7 @@ paths:
       operationId: addParticipantToGroup
       tags:
         - group
-      summary: Adding more participants to group
+      summary: Añadir participantes al grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -2929,19 +2933,19 @@ paths:
               $ref: '#/components/schemas/ManageParticipantRequest'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ManageParticipantResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2951,7 +2955,7 @@ paths:
       operationId: exportGroupParticipants
       tags:
         - group
-      summary: Export group participants as CSV
+      summary: Exportar participantes (CSV)
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: group_id
@@ -2970,13 +2974,13 @@ paths:
                 type: string
                 format: binary
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -2986,7 +2990,7 @@ paths:
       operationId: removeParticipantFromGroup
       tags:
         - group
-      summary: Remove participants from group
+      summary: Expulsar participantes
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -2996,19 +3000,19 @@ paths:
               $ref: '#/components/schemas/ManageParticipantRequest'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ManageParticipantResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3018,7 +3022,7 @@ paths:
       operationId: promoteParticipantToAdmin
       tags:
         - group
-      summary: Promote participants to admin
+      summary: Promover a administradores
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3028,19 +3032,19 @@ paths:
               $ref: '#/components/schemas/ManageParticipantRequest'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ManageParticipantResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3050,7 +3054,7 @@ paths:
       operationId: demoteParticipantToMember
       tags:
         - group
-      summary: Demote participants to member
+      summary: Degradar administradores a miembros
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3060,19 +3064,19 @@ paths:
               $ref: '#/components/schemas/ManageParticipantRequest'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ManageParticipantResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3082,7 +3086,7 @@ paths:
       operationId: joinGroupWithLink
       tags:
         - group
-      summary: Join group with link
+      summary: Unirse al grupo con enlace
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3096,19 +3100,19 @@ paths:
                   example: 'https://chat.whatsapp.com/whatsappKeyJoinGroup'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3118,7 +3122,7 @@ paths:
       operationId: getGroupInfoFromLink
       tags:
         - group
-      summary: Get group information from invitation link
+      summary: Vista previa del grupo desde enlace
       description: Retrieve group information without joining the group using its invitation link
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -3131,19 +3135,19 @@ paths:
           description: WhatsApp group invitation link
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupInfoFromLinkResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3153,7 +3157,7 @@ paths:
       operationId: getGroupParticipantRequests
       tags:
         - group
-      summary: Get list of participant requests to join group
+      summary: Solicitudes pendientes de ingreso
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: group_id
@@ -3165,19 +3169,19 @@ paths:
           description: The group ID to get participant requests for
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupParticipantRequestListResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3187,7 +3191,7 @@ paths:
       operationId: approveGroupParticipantRequest
       tags:
         - group
-      summary: Approve participant request to join group
+      summary: Aprobar solicitud de ingreso
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3211,19 +3215,19 @@ paths:
                 - participants
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3233,7 +3237,7 @@ paths:
       operationId: rejectGroupParticipantRequest
       tags:
         - group
-      summary: Reject participant request to join group
+      summary: Rechazar solicitud de ingreso
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3257,19 +3261,19 @@ paths:
                 - participants
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3279,7 +3283,7 @@ paths:
       operationId: leaveGroup
       tags:
         - group
-      summary: Leave group
+      summary: Abandonar grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3293,19 +3297,19 @@ paths:
                   example: '120363024512399999@g.us'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3315,7 +3319,7 @@ paths:
       operationId: setGroupPhoto
       tags:
         - group
-      summary: Set group photo
+      summary: Cambiar foto del grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3336,19 +3340,19 @@ paths:
                 - group_id
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetGroupPhotoResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3358,7 +3362,7 @@ paths:
       operationId: setGroupName
       tags:
         - group
-      summary: Set group name
+      summary: Cambiar nombre del grupo
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3381,19 +3385,19 @@ paths:
                 - name
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3403,7 +3407,7 @@ paths:
       operationId: setGroupLocked
       tags:
         - group
-      summary: Set group locked status
+      summary: Bloquear edición del grupo (solo admins)
       description: Lock/unlock group so only admins can modify group info
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -3426,19 +3430,19 @@ paths:
                 - locked
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3448,7 +3452,7 @@ paths:
       operationId: setGroupAnnounce
       tags:
         - group
-      summary: Set group announce mode
+      summary: Modo anuncios (solo admins escriben)
       description: Enable/disable announce mode so only admins can send messages
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -3471,19 +3475,19 @@ paths:
                 - announce
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3493,7 +3497,7 @@ paths:
       operationId: setGroupTopic
       tags:
         - group
-      summary: Set group topic
+      summary: Cambiar descripción / asunto del grupo
       description: Set or remove group topic/description
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
@@ -3515,19 +3519,19 @@ paths:
                 - group_id
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3537,7 +3541,7 @@ paths:
       operationId: groupInviteLink
       tags:
         - group
-      summary: Group Invite Link
+      summary: Obtener o regenerar enlace de invitación
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
         - name: group_id
@@ -3555,19 +3559,19 @@ paths:
           description: Reset existing invite link
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetGroupInviteLinkResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3577,7 +3581,7 @@ paths:
       operationId: unfollowNewsletter
       tags:
         - newsletter
-      summary: Unfollow newsletter
+      summary: Dejar de seguir un canal / newsletter
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
       requestBody:
@@ -3591,19 +3595,19 @@ paths:
                   example: '120363024512399999@newsletter'
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3613,7 +3617,7 @@ paths:
       operationId: getNewsletterMessages
       tags:
         - newsletter
-      summary: Get latest newsletter (channel) messages
+      summary: Últimos mensajes de un canal
       description: |
         Fetches the latest messages posted in a newsletter (channel) directly
         from WhatsApp servers. You must be following/subscribed to the
@@ -3644,19 +3648,19 @@ paths:
             minimum: 0
       responses:
         '200':
-          description: OK
+          description: Operación exitosa
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NewsletterMessagesResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Internal Server Error
+          description: Error interno del servidor
           content:
             application/json:
               schema:
@@ -3667,7 +3671,7 @@ paths:
       operationId: downloadNewsletterMessageMedia
       tags:
         - newsletter
-      summary: Download media from a newsletter message
+      summary: Descargar medios de un mensaje de canal
       description: |
         Fetches one newsletter message directly from WhatsApp by server ID,
         downloads its media to the server's statics directory, and returns the
@@ -3692,19 +3696,19 @@ paths:
           example: '120363024512399999@newsletter'
       responses:
         '200':
-          description: Media downloaded successfully
+          description: Medios descargados correctamente
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NewsletterMediaDownloadResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBadRequest'
         '500':
-          description: Message lookup or media download failed
+          description: No se pudo obtener el mensaje o descargar el medio
           content:
             application/json:
               schema:
@@ -3715,7 +3719,7 @@ paths:
       operationId: chatwootSyncHistory
       tags:
         - chatwoot
-      summary: Sync message history to Chatwoot
+      summary: Sincronizar historial hacia Chatwoot
       description: |
         Initiates a background sync of WhatsApp message history to Chatwoot.
         Messages from the configured number of days will be imported.
@@ -3749,7 +3753,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatwootSyncResponse'
         '400':
-          description: Bad Request (device not found or Chatwoot not configured)
+          description: Solicitud inválida (device not found or Chatwoot not configured)
           content:
             application/json:
               schema:
@@ -3781,7 +3785,7 @@ paths:
       operationId: chatwootSyncStatus
       tags:
         - chatwoot
-      summary: Get Chatwoot sync progress
+      summary: Progreso de la sincronización Chatwoot
       description: Returns the current sync progress for a device
       parameters:
         - name: device_id
@@ -3797,7 +3801,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatwootSyncStatusResponse'
         '400':
-          description: Bad Request
+          description: Solicitud inválida
           content:
             application/json:
               schema:
@@ -3808,7 +3812,7 @@ paths:
       operationId: chatwootWebhook
       tags:
         - chatwoot
-      summary: Chatwoot webhook endpoint
+      summary: Webhook global de Chatwoot (entrante)
       description: |
         Receives webhook events from Chatwoot and sends messages to WhatsApp.
         Configure this URL in your Chatwoot inbox webhook settings.
@@ -3833,7 +3837,7 @@ paths:
       operationId: chatwootDeviceWebhook
       tags:
         - chatwoot
-      summary: Per-device Chatwoot webhook endpoint
+      summary: Webhook Chatwoot por dispositivo
       description: |
         Per-device variant of the Chatwoot webhook: configure each device's Chatwoot
         inbox to POST here (the URL is returned as `webhook_url` by the device config
@@ -3866,7 +3870,7 @@ paths:
       operationId: chatwootListConfigs
       tags:
         - chatwoot
-      summary: List per-device Chatwoot configs
+      summary: Listar configs Chatwoot por dispositivo
       description: Returns every per-device Chatwoot routing config. API tokens are masked.
       responses:
         '200':
@@ -3892,7 +3896,7 @@ paths:
       operationId: chatwootGetDeviceConfig
       tags:
         - chatwoot
-      summary: Get a device's Chatwoot config
+      summary: Obtener config Chatwoot del dispositivo
       description: Returns the per-device Chatwoot routing config (API token masked).
       parameters:
         - $ref: '#/components/parameters/ChatwootConfigDeviceId'
@@ -3922,7 +3926,7 @@ paths:
       operationId: chatwootUpsertDeviceConfig
       tags:
         - chatwoot
-      summary: Create or update a device's Chatwoot config
+      summary: Crear o actualizar config Chatwoot
       description: |
         Routes this device's messages to its own Chatwoot destination (URL + account +
         inbox + token) instead of the global CHATWOOT_* env config.
@@ -3999,7 +4003,7 @@ paths:
       operationId: chatwootDeleteDeviceConfig
       tags:
         - chatwoot
-      summary: Delete a device's Chatwoot config
+      summary: Eliminar config Chatwoot del dispositivo
       description: |
         Removes the device's Chatwoot routing config along with its stored message
         links (stale links would otherwise keep answering reverse lookups for the old
@@ -4027,6 +4031,140 @@ paths:
                         type: string
                         example: 'my-device-id'
 
+  /docs/:
+    get:
+      operationId: swaggerUI
+      tags:
+        - docs
+      summary: Documentación interactiva (Swagger UI)
+      description: |
+        Interfaz Swagger para explorar y probar la API. Requiere la misma autenticación
+        Basic Auth que el resto de endpoints (excepto rutas públicas como `/health`).
+      responses:
+        '200':
+          description: Página HTML de Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+  /docs/openapi.yaml:
+    get:
+      operationId: openAPISpec
+      tags:
+        - docs
+      summary: Especificación OpenAPI (YAML)
+      description: Contrato OpenAPI 3.0 embebido/servido por el servidor; la URL base del servidor se ajusta al host de la petición.
+      responses:
+        '200':
+          description: Documento OpenAPI en YAML
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '404':
+          description: Especificación no disponible
+  /media-storage/configs:
+    get:
+      operationId: listMediaStorageConfigs
+      tags:
+        - media-storage
+      summary: Listar configuración de almacenamiento de medios
+      description: Devuelve bucket, carpeta y driver efectivo (local o MiniCloud) por dispositivo.
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+  /devices/{device_id}/media-storage:
+    get:
+      operationId: getDeviceMediaStorage
+      tags:
+        - media-storage
+      summary: Obtener almacenamiento de medios del dispositivo
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operación exitosa
+        '404':
+          description: Dispositivo o configuración no encontrados
+    put:
+      operationId: upsertDeviceMediaStorage
+      tags:
+        - media-storage
+      summary: Configurar bucket/carpeta MiniCloud por dispositivo
+      description: |
+        Permite bucket dedicado o compartido y nombre de carpeta dentro del bucket.
+        Requiere `MEDIA_STORAGE_DRIVER=minicloud` y `MINICLOUD_BASE_URL` configurados.
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bucket:
+                  type: string
+                folder_name:
+                  type: string
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Configuración guardada
+    delete:
+      operationId: deleteDeviceMediaStorage
+      tags:
+        - media-storage
+      summary: Quitar configuración de medios del dispositivo
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuración eliminada
+  /devices/{device_id}/media/{object_key}:
+    get:
+      operationId: proxyDeviceMedia
+      tags:
+        - media-storage
+      summary: Descargar medio almacenado (proxy)
+      description: |
+        Sirve archivos referenciados como `mc:bucket/clave` o rutas locales bajo `statics/media`,
+        según `MEDIA_PROXY_ENABLED` y el driver configurado. Requiere Basic Auth.
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: object_key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contenido binario del medio
+        '404':
+          description: Medio no encontrado
+
 components:
   parameters:
     DeviceIdHeader:
@@ -4034,9 +4172,8 @@ components:
       in: header
       required: false
       description: |
-        Device identifier for multi-device support. Required when multiple devices are registered.
-        If only one device is registered, it will be used as the default.
-        Can also be provided as `device_id` query parameter.
+        Identificador del dispositivo/cuenta. Obligatorio si hay varios dispositivos registrados;
+        con un solo dispositivo se usa por defecto. También podés pasar `device_id` como query.
       schema:
         type: string
         example: 'my-device-id'
@@ -4044,7 +4181,7 @@ components:
       name: device_id
       in: path
       required: true
-      description: Device ID (or WhatsApp JID) whose Chatwoot config is addressed
+      description: ID del dispositivo (o JID de WhatsApp) cuya config Chatwoot se consulta o modifica
       schema:
         type: string
         example: 'my-device-id'
@@ -4099,7 +4236,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get list groups
+          example: Lista de grupos obtenida correctamente
         results:
           type: object
           properties:
@@ -4114,7 +4251,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get group info from link
+          example: Información del grupo obtenida desde el enlace
         results:
           type: object
           properties:
@@ -4178,7 +4315,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get list groups
+          example: Lista de grupos obtenida correctamente
         results:
           type: array
           items:
@@ -4374,7 +4511,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get list groups
+          example: Lista de grupos obtenida correctamente
         results:
           type: object
           properties:
@@ -4631,7 +4768,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Login success
+          example: Inicio de sesión iniciado correctamente
         status:
           type: integer
           example: 200
@@ -5235,7 +5372,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get chat list
+          example: Lista de chats obtenida correctamente
         results:
           type: object
           properties:
@@ -5299,7 +5436,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get chat messages
+          example: Mensajes del chat obtenidos correctamente
         results:
           type: object
           properties:
@@ -5439,7 +5576,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Chat pinned successfully
+          example: Chat fijado correctamente
         results:
           type: object
           properties:
@@ -5448,7 +5585,7 @@ components:
               example: success
             message:
               type: string
-              example: Chat pinned successfully
+              example: Chat fijado correctamente
             chat_jid:
               type: string
               example: '6289685028129@s.whatsapp.net'
@@ -5466,7 +5603,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Disappearing messages set to 86400 seconds
+          example: Mensajes temporales configurados a 86400 segundos
         results:
           type: object
           properties:
@@ -5475,7 +5612,7 @@ components:
               example: success
             message:
               type: string
-              example: Disappearing messages set to 86400 seconds
+              example: Mensajes temporales configurados a 86400 segundos
             chat_jid:
               type: string
               example: '6289685028129@s.whatsapp.net'
@@ -5493,7 +5630,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Chat archived successfully
+          example: Chat archivado correctamente
         results:
           type: object
           properties:
@@ -5502,7 +5639,7 @@ components:
               example: success
             message:
               type: string
-              example: Chat archived successfully
+              example: Chat archivado correctamente
             chat_jid:
               type: string
               example: '6289685028129@s.whatsapp.net'
@@ -5520,7 +5657,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get group info
+          example: Información del grupo obtenida correctamente
         results:
           type: object
           description: Group information object (structure may vary)
@@ -5534,7 +5671,7 @@ components:
           example: SUCCESS
         message:
           type: string
-          example: Success get group invite link
+          example: Enlace de invitación obtenido correctamente
         results:
           type: object
           properties:
@@ -5558,7 +5695,7 @@ components:
           example: SYNC_STARTED
         message:
           type: string
-          example: History sync initiated in background
+          example: Sincronización de historial iniciada en segundo plano
         results:
           type: object
           properties:

@@ -42,7 +42,7 @@ func (controller *User) UserInfo(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get user info",
+		Message: "Información de usuario obtenida correctamente",
 		Results: response,
 	})
 }
@@ -62,7 +62,7 @@ func (controller *User) UserAvatar(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get avatar",
+		Message: "Avatar obtenido correctamente",
 		Results: response,
 	})
 }
@@ -83,7 +83,7 @@ func (controller *User) UserChangeAvatar(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success change avatar",
+		Message: "Avatar actualizado correctamente",
 	})
 }
 
@@ -95,7 +95,7 @@ func (controller *User) UserMyPrivacySetting(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get privacy",
+		Message: "Ajustes de privacidad obtenidos",
 		Results: response,
 	})
 }
@@ -113,7 +113,7 @@ func (controller *User) UserMyListGroups(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get list groups",
+		Message: "Lista de grupos obtenida correctamente",
 		Results: response,
 	})
 }
@@ -126,7 +126,7 @@ func (controller *User) UserMyListNewsletter(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get list newsletter",
+		Message: "Lista de canales obtenida correctamente",
 		Results: response,
 	})
 }
@@ -139,7 +139,7 @@ func (controller *User) UserMyListContacts(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get list contacts",
+		Message: "Lista de contactos obtenida correctamente",
 		Results: response,
 	})
 }
@@ -155,7 +155,7 @@ func (controller *User) UserChangePushName(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success change push name",
+		Message: "Nombre visible actualizado correctamente",
 	})
 }
 
@@ -170,7 +170,7 @@ func (controller *User) UserCheck(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success check user",
+		Message: "Comprobación de número completada",
 		Results: response,
 	})
 }
@@ -190,7 +190,7 @@ func (controller *User) UserBusinessProfile(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Success get business profile",
+		Message: "Perfil comercial obtenido correctamente",
 		Results: response,
 	})
 }

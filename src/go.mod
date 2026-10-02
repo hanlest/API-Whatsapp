@@ -26,6 +26,7 @@ require (
 	go.mau.fi/whatsmeow v0.0.0-20260909164725-b25a56d63729
 	golang.org/x/image v0.44.0
 	google.golang.org/protobuf v1.36.12
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.53.0
 )
 

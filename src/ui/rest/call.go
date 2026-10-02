@@ -32,7 +32,7 @@ func (controller *Call) RejectCall(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Call rejected successfully",
+		Message: "Llamada rechazada correctamente",
 		Results: nil,
 	})
 }

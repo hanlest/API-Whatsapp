@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"strings"
 
 	"go.mau.fi/whatsmeow"
 )
@@ -32,6 +33,16 @@ func DeviceFromContext(ctx context.Context) (*DeviceInstance, bool) {
 // ClientFromContext returns the client stored in the device context.
 // If a device was explicitly set in context but has no client (not logged in), returns nil.
 // Only falls back to global client when no device was set in context (backward compatibility).
+// MediaDeviceID returns the slot device id from context, or "default" when unset.
+func MediaDeviceID(ctx context.Context) string {
+	if inst, ok := DeviceFromContext(ctx); ok && inst != nil {
+		if id := strings.TrimSpace(inst.ID()); id != "" {
+			return id
+		}
+	}
+	return "default"
+}
+
 func ClientFromContext(ctx context.Context) *whatsmeow.Client {
 	if inst, ok := DeviceFromContext(ctx); ok && inst != nil {
 		// Device was explicitly set - return its client (may be nil if not logged in)

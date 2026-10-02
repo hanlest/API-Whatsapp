@@ -69,7 +69,7 @@ func (controller *Message) DeleteMessage(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Message deleted successfully",
+		Message: "Mensaje eliminado correctamente",
 		Results: nil,
 	})
 }
@@ -165,7 +165,7 @@ func (controller *Message) StarMessage(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Starred message successfully",
+		Message: "Mensaje destacado correctamente",
 		Results: nil,
 	})
 }
@@ -184,7 +184,7 @@ func (controller *Message) UnstarMessage(c fiber.Ctx) error {
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
-		Message: "Unstarred message successfully",
+		Message: "Destacado del mensaje quitado correctamente",
 		Results: nil,
 	})
 }
@@ -218,7 +218,11 @@ func (controller *Message) DownloadMedia(c fiber.Ctx) error {
 	response, err := controller.Service.DownloadMedia(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 	if response.FileURL == "" {
-		response.FileURL = publicStaticFileURL(c, response.FilePath)
+		deviceID := ""
+		if inst := getDeviceFromCtx(c); inst != nil {
+			deviceID = inst.ID()
+		}
+		response.FileURL = publicMediaFileURL(c, deviceID, response.FilePath)
 	}
 
 	return c.JSON(utils.ResponseData{

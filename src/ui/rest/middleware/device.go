@@ -26,7 +26,7 @@ func DeviceMiddleware(dm *whatsapp.DeviceManager) fiber.Handler {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(utils.ResponseData{
 				Status:  fiber.StatusServiceUnavailable,
 				Code:    "DEVICE_MANAGER_UNAVAILABLE",
-				Message: "Device manager is not initialized",
+				Message: "El administrador de dispositivos no está inicializado",
 				Results: nil,
 			})
 		}
@@ -47,7 +47,7 @@ func DeviceMiddleware(dm *whatsapp.DeviceManager) fiber.Handler {
 				return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{
 					Status:  fiber.StatusNotFound,
 					Code:    "DEVICE_NOT_FOUND",
-					Message: "device not found; create a device first from /api/devices or provide a valid X-Device-Id",
+					Message: "dispositivo no encontrado; creá uno en POST /devices o enviá un X-Device-Id válido",
 					Results: map[string]string{"device_id": resolvedID},
 				})
 			}
@@ -55,7 +55,7 @@ func DeviceMiddleware(dm *whatsapp.DeviceManager) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
 				Status:  fiber.StatusBadRequest,
 				Code:    "DEVICE_ID_REQUIRED",
-				Message: "device_id is required via X-Device-Id header or device_id query",
+				Message: "device_id es obligatorio (header X-Device-Id o query device_id)",
 				Results: nil,
 			})
 		}
