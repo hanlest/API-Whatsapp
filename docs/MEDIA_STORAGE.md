@@ -34,6 +34,7 @@ curl -u user:pass http://localhost:3000/media-storage/configs
 
 1. Ensure MiniCloud has at least one **local** storage backend (template for `rootPath` when auto-creating per-device storages).
 2. Buckets can be created manually in admin, or left to GoWA when `MINICLOUD_AUTO_CREATE_BUCKET=true` (registers bucket + assigns primary storage on first failed upload).
+3. On startup, GoWA provisions MiniCloud **once per bucket**: if the bucket already has a primary storage, other registered devices do **not** get extra primaries named after each device. Use `MINICLOUD_DEFAULT_STORAGE_ID=whatsapp` if every device should share the same backend id.
 3. Upload API: `POST {MINICLOUD_BASE_URL}/storage/upload/storage/v1/b/{bucket}/o?uploadType=multipart`
 
 Without auto-create, uploading to an unknown bucket returns **HTTP 400** (`BUCKET_NOT_CONFIGURED`: bucket without assigned storages).

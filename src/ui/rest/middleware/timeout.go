@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,8 +16,14 @@ const DefaultRequestTimeout = 45 * time.Second
 // If the handler doesn't complete within the timeout, the context is cancelled
 // and whatsmeow SDK calls will return context.DeadlineExceeded.
 func RequestTimeout(timeout time.Duration) fiber.Handler {
+	const statusPublishTimeout = 15 * time.Minute
 	return func(c fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(c.Context(), timeout)
+		effective := timeout
+		path := c.Path()
+		if strings.HasSuffix(path, "/send/status") || strings.HasSuffix(path, "/whatsapp/send-status") {
+			effective = statusPublishTimeout
+		}
+		ctx, cancel := context.WithTimeout(c.Context(), effective)
 		defer cancel()
 		c.SetContext(ctx)
 		return c.Next()

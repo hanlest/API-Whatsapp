@@ -17,6 +17,8 @@ var (
 	AppBasePath            = ""
 	AppTrustedProxies      []string // Trusted proxy IP ranges (e.g., "0.0.0.0/0" for all, or specific CIDRs)
 	AppCORSAllowedOrigins  []string // CORS allowed origins; empty means "*" (any origin)
+	AppAPIKey              string   // Baileys-compatible x-api-key for /whatsapp/* drop-in routes; empty = skip check
+	AppMessageRateLimit    int      // Max requests per IP per minute on Baileys-style send routes; 0 = disabled
 
 	// Web UI (gowa-ui) runtime download settings. The dashboard is a separate
 	// project released as a single HTML file; gowa fetches the latest release

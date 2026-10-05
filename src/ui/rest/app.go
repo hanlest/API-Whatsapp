@@ -7,6 +7,7 @@ import (
 	domainApp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/app"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/webhook"
 	"github.com/gofiber/fiber/v3"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -34,6 +35,16 @@ func InitRestApp(app fiber.Router, service domainApp.IAppUsecase) App {
 // standalone UIs can read server metadata before any device exists.
 func InitRestAppInfo(app fiber.Router) {
 	app.Get("/app/info", AppInfo)
+	app.Get("/app/webhook-events", WebhookEventCatalog)
+}
+
+func WebhookEventCatalog(c fiber.Ctx) error {
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: "Webhook event catalog",
+		Results: webhook.EventCatalog(),
+	})
 }
 
 func AppInfo(c fiber.Ctx) error {

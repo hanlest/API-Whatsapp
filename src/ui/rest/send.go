@@ -1,9 +1,13 @@
 package rest
 
 import (
+	"strings"
+
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/helpers"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/middleware"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -25,7 +29,27 @@ func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
 	app.Post("/send/poll", rest.SendPoll)
 	app.Post("/send/presence", rest.SendPresence)
 	app.Post("/send/chat-presence", rest.SendChatPresence)
+	app.Post("/send/status", rest.SendStatus)
+	// Exegeta/Baileys drop-in path (same handler).
+	app.Post("/whatsapp/send-status", rest.SendStatus)
+
+	baileysSend := app.Group("/whatsapp", middleware.BaileysAPIKey(), middleware.MessageRateLimiter())
+	baileysSend.Post("/send-buttons", rest.SendButtonsBaileys)
 	return rest
+}
+
+func (controller *Send) SendButtonsBaileys(c fiber.Ctx) error {
+	var request domainSend.ButtonsRequest
+	if err := c.Bind().Body(&request); err != nil {
+		return helpers.WriteBaileysError(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	response, err := controller.Service.SendButtons(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
+	if err != nil {
+		return helpers.WriteBaileysUsecaseError(c, err)
+	}
+
+	return helpers.WriteBaileysSuccess(c, "Botones enviados correctamente", response.MessageID)
 }
 
 func (controller *Send) SendText(c fiber.Ctx) error {
@@ -241,6 +265,29 @@ func (controller *Send) SendPresence(c fiber.Ctx) error {
 	utils.PanicIfNeeded(err)
 
 	response, err := controller.Service.SendPresence(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
+	utils.PanicIfNeeded(err)
+
+	return c.JSON(utils.ResponseData{
+		Status:  200,
+		Code:    "SUCCESS",
+		Message: response.Status,
+		Results: response,
+	})
+}
+
+func (controller *Send) SendStatus(c fiber.Ctx) error {
+	var request domainSend.StatusRequest
+	contentType := c.Get("Content-Type")
+	if strings.Contains(contentType, "multipart/form-data") {
+		err := c.Bind().Form(&request)
+		utils.PanicIfNeeded(err)
+		request.Attachment, _ = c.FormFile("attachment")
+	} else {
+		err := c.Bind().Body(&request)
+		utils.PanicIfNeeded(err)
+	}
+
+	response, err := controller.Service.SendStatus(whatsapp.ContextWithDevice(c.Context(), getDeviceFromCtx(c)), request)
 	utils.PanicIfNeeded(err)
 
 	return c.JSON(utils.ResponseData{

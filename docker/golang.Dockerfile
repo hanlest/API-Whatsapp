@@ -7,6 +7,8 @@ WORKDIR /whatsapp
 
 # Cache dependencies — only re-downloads when go.mod/go.sum change
 COPY ./src/go.mod ./src/go.sum ./
+# Patched whatsmeow (status@broadcast explicit recipients); see third_party/whatsmeow/README.md
+COPY ./third_party/whatsmeow /third_party/whatsmeow
 RUN go mod download
 
 # Copy source and build

@@ -55,10 +55,74 @@ func ensureMiniCloudBucket(ctx context.Context, m *miniCloudBackend, deviceID, b
 		return fmt.Errorf("create bucket: %w", err)
 	}
 
+	existing, err := m.listBucketPrimaryStorageIDs(ctx, bucket)
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		for _, id := range existing {
+			if id == storageID {
+				return m.ensureStoragePrimary(ctx, storageID, bucket)
+			}
+		}
+		// Bucket ya tiene principal(es); no crear otro por cada dispositivo registrado.
+		return nil
+	}
+
 	if err := m.ensureStoragePrimary(ctx, storageID, bucket); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (m *miniCloudBackend) listBucketPrimaryStorageIDs(ctx context.Context, bucket string) ([]string, error) {
+	q := url.QueryEscape(bucket)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.baseURL+"/admin/api/storage/storages?bucket="+q, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("list storages for bucket: %s", strings.TrimSpace(string(b)))
+	}
+	var payload struct {
+		Storages []struct {
+			ID          string `json:"id"`
+			StorageType string `json:"storageType"`
+			Enabled     bool   `json:"enabled"`
+		} `json:"storages"`
+		Backends []struct {
+			ID          string `json:"id"`
+			StorageType string `json:"storageType"`
+			Enabled     bool   `json:"enabled"`
+		} `json:"backends"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	list := payload.Storages
+	if len(list) == 0 {
+		list = payload.Backends
+	}
+	var ids []string
+	for _, s := range list {
+		if !s.Enabled {
+			continue
+		}
+		st := strings.ToLower(strings.TrimSpace(s.StorageType))
+		if st != "" && st != "primary" {
+			continue
+		}
+		if id := strings.TrimSpace(s.ID); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
 }
 
 func (m *miniCloudBackend) ensureStoragePrimary(ctx context.Context, storageID, bucket string) error {

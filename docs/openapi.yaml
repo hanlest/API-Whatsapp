@@ -1818,6 +1818,119 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorInternalServer'
+  /send/status:
+    post:
+      operationId: sendStatus
+      tags:
+        - send
+      summary: Publicar Estado de WhatsApp (historia 24 h)
+      description: |
+        Publica un Estado en `status@broadcast` con audiencia explícita (`statusJids`), compatible con el contrato Exegeta/Baileys `POST /whatsapp/send-status`.
+        Requiere sesión conectada y `X-Device-Id`.
+      parameters:
+        - $ref: '#/components/parameters/DeviceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendStatusMultipartRequest'
+      responses:
+        '200':
+          description: Estado publicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendResponse'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBadRequest'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInternalServer'
+  /whatsapp/send-status:
+    post:
+      operationId: sendStatusLegacy
+      tags:
+        - send
+      summary: Publicar Estado (ruta legacy Exegeta/Baileys)
+      description: Alias de `POST /send/status` con el mismo cuerpo y respuesta.
+      parameters:
+        - $ref: '#/components/parameters/DeviceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendStatusMultipartRequest'
+      responses:
+        '200':
+          description: Estado publicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendResponse'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBadRequest'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInternalServer'
+  /whatsapp/send-buttons:
+    post:
+      operationId: sendButtonsBaileys
+      tags:
+        - send
+      summary: Menú de opciones en texto (contrato Exegeta/Baileys send-buttons)
+      description: |
+        Mismo JSON que Baileys `POST /whatsapp/send-buttons`, pero GoWA envía un **mensaje de texto** con opciones numeradas
+        (los botones nativos de WhatsApp no suelen llegar al móvil vía multidevice). El usuario responde con el número, el `id` o el texto de la opción.
+        Requiere `x-api-key` cuando `API_KEY` está configurado. Respuesta `{ success, message, data: { id } }` y `X-Device-Id`.
+      parameters:
+        - $ref: '#/components/parameters/DeviceIdHeader'
+        - name: x-api-key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Obligatorio si la variable de entorno API_KEY está definida
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendButtonsBaileysRequest'
+      responses:
+        '200':
+          description: Botones enviados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendButtonsBaileysResponse'
+        '400':
+          description: Validación
+        '401':
+          description: API key inválida o ausente
+        '503':
+          description: Sesión WhatsApp no lista
   /send/presence:
     post:
       operationId: sendPresence
@@ -4613,6 +4726,115 @@ components:
             read_receipts:
               type: string
               example: all
+    SendButtonsBaileysRequest:
+      type: object
+      required:
+        - phone
+        - text
+        - buttons
+      properties:
+        phone:
+          type: string
+          pattern: '^569\d{8}$'
+          example: '56912345678'
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        footer:
+          type: string
+          maxLength: 60
+          nullable: true
+        buttons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: object
+            required:
+              - id
+              - displayText
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 256
+              displayText:
+                type: string
+                minLength: 1
+                maxLength: 20
+    SendButtonsBaileysResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          example: Botones enviados correctamente
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              nullable: true
+    SendStatusRequest:
+      type: object
+      required:
+        - kind
+        - statusJids
+      properties:
+        kind:
+          type: string
+          enum: [text, image, video]
+        text:
+          type: string
+          maxLength: 700
+          description: Requerido si kind=text
+        backgroundColor:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: '#075E54'
+        font:
+          type: integer
+          minimum: 0
+          maximum: 8
+        fileBase64:
+          type: string
+          description: Base64 del archivo (image/video)
+        mimetype:
+          type: string
+          example: image/jpeg
+        caption:
+          type: string
+        statusJids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            example: '56952021860@s.whatsapp.net'
+          description: JIDs de contactos que reciben el Estado (paridad Baileys statusJidList)
+    SendStatusMultipartRequest:
+      type: object
+      required:
+        - kind
+        - mimetype
+        - statusJids
+        - attachment
+      properties:
+        kind:
+          type: string
+          enum: [image, video]
+        mimetype:
+          type: string
+        caption:
+          type: string
+        statusJids:
+          type: array
+          items:
+            type: string
+        attachment:
+          type: string
+          format: binary
     SendResponse:
       type: object
       properties:

@@ -112,6 +112,12 @@ func initEnvConfig() {
 	if envCORSOrigins := viper.GetString("app_cors_allowed_origins"); envCORSOrigins != "" {
 		config.AppCORSAllowedOrigins = strings.Split(envCORSOrigins, ",")
 	}
+	if viper.IsSet("api_key") {
+		config.AppAPIKey = strings.TrimSpace(viper.GetString("api_key"))
+	}
+	if viper.IsSet("app_message_rate_limit") {
+		config.AppMessageRateLimit = viper.GetInt("app_message_rate_limit")
+	}
 
 	// Web UI settings. Guarded on GetString != "" so an unset key keeps the
 	// default instead of being overwritten by the zero value of GetBool /

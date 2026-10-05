@@ -24,6 +24,7 @@ type IInteractionSender interface {
 	SendLink(ctx context.Context, request LinkRequest) (response GenericResponse, err error)
 	SendLocation(ctx context.Context, request LocationRequest) (response GenericResponse, err error)
 	SendPoll(ctx context.Context, request PollRequest) (response GenericResponse, err error)
+	SendButtons(ctx context.Context, request ButtonsRequest) (response GenericResponse, err error)
 }
 
 // IPresenceSender handles presence-related operations
@@ -37,6 +38,11 @@ type IForwardSender interface {
 	SendForward(ctx context.Context, request ForwardRequest) (response GenericResponse, err error)
 }
 
+// IStatusSender publishes WhatsApp Status (stories) updates.
+type IStatusSender interface {
+	SendStatus(ctx context.Context, request StatusRequest) (response GenericResponse, err error)
+}
+
 // ISendUsecase combines all sender interfaces for backward compatibility
 type ISendUsecase interface {
 	ITextSender
@@ -44,4 +50,5 @@ type ISendUsecase interface {
 	IInteractionSender
 	IPresenceSender
 	IForwardSender
+	IStatusSender
 }

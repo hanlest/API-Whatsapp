@@ -666,6 +666,9 @@ You may also fork or modify the source code.
 | ✅       | Send Poll / Vote                       | POST   | /send/poll                          |
 | ✅       | Send Presence                          | POST   | /send/presence                      |
 | ✅       | Send Chat Presence (Typing Indicator)  | POST   | /send/chat-presence                 |
+| ✅       | Publish WhatsApp Status (24h story)    | POST   | /send/status                        |
+| ✅       | Publish Status (Exegeta/Baileys alias) | POST   | /whatsapp/send-status               |
+| ✅       | Send Buttons (Exegeta/Baileys)         | POST   | /whatsapp/send-buttons              |
 | ✅       | Revoke Message                         | POST   | /message/:message_id/revoke         |
 | ✅       | React Message                          | POST   | /message/:message_id/reaction       |
 | ✅       | Delete Message                         | POST   | /message/:message_id/delete         |
