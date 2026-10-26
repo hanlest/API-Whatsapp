@@ -11,46 +11,10 @@ Copy-Item -Recurse $Src $Dest
 attrib -R "$Dest\*" /S /D 2>$null
 
 $sendGo = Join-Path $Dest "send.go"
-$c = Get-Content $sendGo -Raw
-if ($c -notmatch "StatusBroadcastParticipants") {
-  $c = $c -replace '(AdditionalNodes \*\[]waBinary\.Node\r?\n\})', "AdditionalNodes *[]waBinary.Node`r`n`t// StatusBroadcastParticipants overrides status privacy resolution when sending to status@broadcast.`r`n`tStatusBroadcastParticipants []types.JID`r`n}"
-  $old = @'
-		} else {
-			groupParticipants, err = cli.getBroadcastListParticipants(ctx, to)
-			if err != nil {
-				err = fmt.Errorf("failed to get broadcast list members: %w", err)
-				return
-			}
-		}
-'@
-  $new = @'
-		} else if len(req.StatusBroadcastParticipants) > 0 && to == types.StatusBroadcastJID {
-			groupParticipants = append([]types.JID(nil), req.StatusBroadcastParticipants...)
-			ownIDNonAD := cli.getOwnID().ToNonAD()
-			if ownIDNonAD.IsEmpty() {
-				err = ErrNotLoggedIn
-				return
-			}
-			selfIndex := -1
-			for i, participant := range groupParticipants {
-				if participant.User == ownIDNonAD.User {
-					selfIndex = i
-					break
-				}
-			}
-			if selfIndex < 0 {
-				groupParticipants = append(groupParticipants, ownIDNonAD)
-			}
-		} else {
-			groupParticipants, err = cli.getBroadcastListParticipants(ctx, to)
-			if err != nil {
-				err = fmt.Errorf("failed to get broadcast list members: %w", err)
-				return
-			}
-		}
-'@
-  $c2 = $c.Replace($old, $new)
-  if ($c2 -eq $c) { throw "Failed to patch send.go (upstream layout changed?)" }
-  Set-Content -Path $sendGo -Value $c2 -NoNewline
+$py = Join-Path $Root "scripts\patch_whatsmeow_status_send.py"
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+  throw "python required to patch send.go (run patch_whatsmeow_status_send.py)"
 }
+& python $py $sendGo
+if ($LASTEXITCODE -ne 0) { throw "Failed to patch send.go (exit $LASTEXITCODE)" }
 Write-Host "whatsmeow vendored and patched at $Dest"

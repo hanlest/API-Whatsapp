@@ -1,3 +1,4 @@
 {
-  "logo-image-url": "logo.png"
+  "logo-image-url": "logo.png",
+  "description": "API de comunicación via WhatsApp."
 }

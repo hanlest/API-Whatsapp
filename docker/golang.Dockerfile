@@ -7,8 +7,10 @@ WORKDIR /whatsapp
 
 # Cache dependencies — only re-downloads when go.mod/go.sum change
 COPY ./src/go.mod ./src/go.sum ./
-# Patched whatsmeow (status@broadcast explicit recipients); see third_party/whatsmeow/README.md
-COPY ./third_party/whatsmeow /third_party/whatsmeow
+COPY ./scripts/vendor-whatsmeow-status.sh ./scripts/patch_whatsmeow_status_send.py /scripts/
+RUN apk add --no-cache python3 \
+	&& chmod +x /scripts/vendor-whatsmeow-status.sh \
+	&& ROOT=/whatsapp GOMOD=/whatsapp/go.mod /scripts/vendor-whatsmeow-status.sh
 RUN go mod download
 
 # Copy source and build

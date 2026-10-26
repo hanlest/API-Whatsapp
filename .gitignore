@@ -3,6 +3,7 @@ bin/
 main
 main.exe
 src/gowa
+src/go-whatsapp-web-multidevice.exe
 .claude
 
 # Build artifacts
@@ -35,6 +36,9 @@ history-*.json
 .DS_Store
 tmp/
 
+# Local Cursor launcher (copied per machine)
+Cursor-Aqui.bat
+
 # Worktrees
 .worktrees/
 
@@ -43,4 +47,7 @@ docs/superpowers/
 
 # whatsmeow store (legacy path)
 src/whatsapp/
+
+# Vendored patched whatsmeow (generate with scripts/vendor-whatsmeow-status.*)
+third_party/whatsmeow/
 .mcp.json
